@@ -80,7 +80,8 @@ function createRoom(hostId, hostName, avatarId, mode = 'classic', isPublic = fal
         turnTimeLeft: modeConfig.turnTime,
         guessedPlayers: [],
         maxPlayers: 8,
-        drawHistory: []
+        drawHistory: [],
+        revealedHints: []  // indices of letters revealed as hints
     };
     rooms.set(code, room);
     if (isPublic) publicRooms.add(code);
@@ -172,12 +173,13 @@ function selectWord(room, word) {
     room.currentWord = word;
     room.usedWords.push(word);
     room.state = 'playing';
+    room.revealedHints = [];
 
     const drawer = getDrawer(room);
 
     io.to(drawer.id).emit('wordSelected', { word, isDrawer: true });
 
-    const hint = word.split('').map(ch => (ch === ' ' ? '  ' : '_ ')).join('').trim();
+    const hint = generateHint(word, []);
     room.players.forEach(p => {
         if (p.id !== drawer.id) {
             io.to(p.id).emit('wordSelected', { word: hint, isDrawer: false, wordLength: word.length });
@@ -186,6 +188,14 @@ function selectWord(room, word) {
 
     io.to(room.code).emit('clearCanvas');
     startTurnTimer(room);
+}
+
+function generateHint(word, revealedIndices) {
+    return word.split('').map((ch, i) => {
+        if (ch === ' ') return '  ';
+        if (revealedIndices.includes(i)) return ch + ' ';
+        return '_ ';
+    }).join('').trim();
 }
 
 function endTurn(room, allGuessed) {

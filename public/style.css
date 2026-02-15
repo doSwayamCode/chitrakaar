@@ -467,12 +467,12 @@ body {
 
 .join-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 10px;
 }
 
 .join-section input {
-  width: 100%;
+  width: 120px;
   padding: 18px 20px;
   border: 2px solid var(--accent-saffron);
   background: rgba(255, 107, 43, 0.08);
@@ -504,7 +504,7 @@ body {
 }
 
 .join-section .btn {
-  width: 100%;
+  flex: 1;
   padding: 14px 24px;
 }
 
