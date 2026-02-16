@@ -14,14 +14,11 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e6
 });
 
-// Middleware
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
     etag: true
 }));
-
-// ─── Avatar Definitions ─────────────────────────────────────────────────────
 
 const AVATARS = [
     { id: 0, name: 'Turban', color: '#ff6b2b' },
@@ -38,20 +35,26 @@ const AVATARS = [
     { id: 11, name: 'Topi', color: '#95a5a6' }
 ];
 
-// ─── Game Mode Definitions ───────────────────────────────────────────────────
 
 const GAME_MODES = {
     classic: { label: 'Classic', turnTime: 80, rounds: 3 },
     bollywood: { label: 'Bollywood', turnTime: 80, rounds: 3 },
     cricket: { label: 'Cricket', turnTime: 80, rounds: 3 },
     food: { label: 'Food', turnTime: 80, rounds: 3 },
+    festivals: { label: 'Festivals', turnTime: 80, rounds: 3 },
+    travel: { label: 'Travel', turnTime: 80, rounds: 3 },
+    culture: { label: 'Culture', turnTime: 80, rounds: 3 },
+    history: { label: 'History', turnTime: 80, rounds: 3 },
+    nature: { label: 'Nature', turnTime: 80, rounds: 3 },
+    memes: { label: 'Memes', turnTime: 70, rounds: 3 },
+    hard: { label: 'Hard Mode', turnTime: 60, rounds: 4 },
     speed: { label: 'Speed', turnTime: 30, rounds: 4 }
 };
 
-// ─── In-Memory State ────────────────────────────────────────────────────────
 
 const rooms = new Map();
-const publicRooms = new Set(); // room codes that are public
+const publicRooms = new Set();
+const MAX_ROOMS = 1000;
 
 function generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -81,7 +84,8 @@ function createRoom(hostId, hostName, avatarId, mode = 'classic', isPublic = fal
         guessedPlayers: [],
         maxPlayers: 8,
         drawHistory: [],
-        revealedHints: []  // indices of letters revealed as hints
+        revealedHints: [],
+        createdAt: Date.now()
     };
     rooms.set(code, room);
     if (isPublic) publicRooms.add(code);
@@ -93,6 +97,7 @@ function getDrawer(room) {
 }
 
 function levenshtein(a, b) {
+    if (a.length > 50 || b.length > 50) return 999;
     const matrix = [];
     for (let i = 0; i <= b.length; i++) matrix[i] = [i];
     for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
@@ -127,16 +132,64 @@ function clearTurnTimer(room) {
 function startTurnTimer(room) {
     clearTurnTimer(room);
     room.turnTimeLeft = room.turnTime;
+    
+    const hintTimings = calculateHintTimings(room.currentWord, room.turnTime);
 
     room.turnTimer = setInterval(() => {
         room.turnTimeLeft--;
         io.to(room.code).emit('timerUpdate', room.turnTimeLeft);
+        
+        revealHintIfNeeded(room, hintTimings);
 
         if (room.turnTimeLeft <= 0) {
             clearTurnTimer(room);
             endTurn(room, false);
         }
     }, 1000);
+}
+
+function calculateHintTimings(word, totalTime) {
+    const lettersOnly = word.replace(/\s/g, '');
+    const wordLength = lettersOnly.length;
+    
+    if (wordLength <= 4) {
+        return [Math.floor(totalTime * 0.5)];
+    } else if (wordLength <= 8) {
+        return [Math.floor(totalTime * 0.65), Math.floor(totalTime * 0.35)];
+    } else {
+        return [Math.floor(totalTime * 0.7), Math.floor(totalTime * 0.45), Math.floor(totalTime * 0.2)];
+    }
+}
+
+function revealHintIfNeeded(room, hintTimings) {
+    if (!room.currentWord || room.state !== 'playing') return;
+    
+    const targetHintCount = hintTimings.filter(t => room.turnTimeLeft <= t).length;
+    
+    if (targetHintCount > room.revealedHints.length) {
+        const lettersOnly = room.currentWord.replace(/\s/g, '');
+        const availableIndices = [];
+        
+        for (let i = 0; i < room.currentWord.length; i++) {
+            if (room.currentWord[i] !== ' ' && !room.revealedHints.includes(i)) {
+                availableIndices.push(i);
+            }
+        }
+        
+        if (availableIndices.length > 0) {
+            const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+            room.revealedHints.push(randomIndex);
+            
+            const drawer = getDrawer(room);
+            const hint = generateHint(room.currentWord, room.revealedHints);
+            
+            room.players.forEach(p => {
+                if (p.id !== drawer.id && !room.guessedPlayers.includes(p.id)) {
+                    io.to(p.id).emit('hintRevealed', { hint });
+                }
+            });
+        }
+    }
 }
 
 function startWordChoice(room) {
@@ -294,7 +347,6 @@ function startGame(room) {
     return true;
 }
 
-// Find a joinable public room
 function findPublicRoom() {
     for (const code of publicRooms) {
         const room = rooms.get(code);
@@ -305,7 +357,18 @@ function findPublicRoom() {
     return null;
 }
 
-// ─── Input Sanitization ─────────────────────────────────────────────────────
+function cleanupOldRooms() {
+    const now = Date.now();
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    for (const [code, room] of rooms) {
+        if (now - room.createdAt > TWO_HOURS && room.state === 'waiting' && room.players.length === 0) {
+            rooms.delete(code);
+            publicRooms.delete(code);
+        }
+    }
+}
+
+setInterval(cleanupOldRooms, 10 * 60 * 1000);
 
 function sanitizeName(name) {
     if (typeof name !== 'string') return '';
@@ -317,7 +380,26 @@ function sanitizeMessage(msg) {
     return msg.trim().substring(0, 200);
 }
 
-// ─── Rate Limiting ──────────────────────────────────────────────────────────
+function validateDrawData(data) {
+    if (!data || typeof data !== 'object') return false;
+    
+    if (data.type === 'line') {
+        return typeof data.x1 === 'number' && data.x1 >= 0 && data.x1 <= 1 &&
+               typeof data.y1 === 'number' && data.y1 >= 0 && data.y1 <= 1 &&
+               typeof data.x2 === 'number' && data.x2 >= 0 && data.x2 <= 1 &&
+               typeof data.y2 === 'number' && data.y2 >= 0 && data.y2 <= 1 &&
+               typeof data.size === 'number' && data.size > 0 && data.size <= 50 &&
+               typeof data.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.color);
+    }
+    
+    if (data.type === 'fill') {
+        return typeof data.x === 'number' && data.x >= 0 && data.x <= 1 &&
+               typeof data.y === 'number' && data.y >= 0 && data.y <= 1 &&
+               typeof data.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.color);
+    }
+    
+    return false;
+}
 
 const rateLimits = new Map();
 
@@ -333,13 +415,14 @@ function rateLimit(socketId, type, maxPerSecond) {
     return true;
 }
 
-// ─── Socket.IO Events ──────────────────────────────────────────────────────
-
 io.on('connection', (socket) => {
     let currentRoom = null;
 
-    // Create room
     socket.on('createRoom', ({ playerName, avatarId, mode, isPublic }) => {
+        if (rooms.size >= MAX_ROOMS) {
+            socket.emit('error', { message: 'Server is at capacity. Please try again later.' });
+            return;
+        }
         const name = sanitizeName(playerName);
         if (!name) {
             socket.emit('error', { message: 'Please enter a valid name.' });
@@ -360,7 +443,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Join room
     socket.on('joinRoom', ({ roomCode, playerName, avatarId }) => {
         const name = sanitizeName(playerName);
         if (!name) {
@@ -411,7 +493,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Quick Play (Public Rooms)
     socket.on('quickPlay', ({ playerName, avatarId }) => {
         const name = sanitizeName(playerName);
         if (!name) {
@@ -464,7 +545,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Start game
     socket.on('startGame', () => {
         if (!currentRoom) return;
         const room = rooms.get(currentRoom);
@@ -480,7 +560,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Word chosen by drawer
     socket.on('wordChosen', ({ word }) => {
         if (!currentRoom) return;
         const room = rooms.get(currentRoom);
@@ -492,10 +571,11 @@ io.on('connection', (socket) => {
         selectWord(room, word);
     });
 
-    // Drawing events
     socket.on('draw', (data) => {
         if (!currentRoom) return;
         if (!rateLimit(socket.id, 'draw', 60)) return;
+        if (!validateDrawData(data)) return;
+        
         const room = rooms.get(currentRoom);
         if (!room || room.state !== 'playing') return;
 
@@ -518,7 +598,6 @@ io.on('connection', (socket) => {
         socket.to(currentRoom).emit('clearCanvas');
     });
 
-    // Chat / Guess
     socket.on('chatMessage', ({ message }) => {
         if (!currentRoom) return;
         if (!rateLimit(socket.id, 'chat', 5)) return;
@@ -586,7 +665,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Disconnect
     socket.on('disconnect', () => {
         rateLimits.delete(socket.id);
 
@@ -647,8 +725,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// ─── API: Get available avatars ─────────────────────────────────────────────
-
 app.get('/api/avatars', (req, res) => {
     res.json(AVATARS);
 });
@@ -657,15 +733,12 @@ app.get('/api/modes', (req, res) => {
     res.json(GAME_MODES);
 });
 
-// ─── Start Server ───────────────────────────────────────────────────────────
-
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Chitrakaar server running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-// ─── Graceful Shutdown ──────────────────────────────────────────────────────
 
 function shutdown() {
     console.log('\nShutting down gracefully...');

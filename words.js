@@ -1,6 +1,3 @@
-// Chitrakaar — Indian Word Bank
-// 400+ words across multiple categories
-
 const words = {
     bollywood: [
         "Sholay", "DDLJ", "Lagaan", "Dangal", "Pushpa", "RRR", "Gadar",
@@ -220,10 +217,17 @@ const words = {
 
 // Mode -> category mapping
 const modeCategories = {
-    classic: null,      // all categories
+    classic: null,
     bollywood: ['bollywood', 'personalities', 'memes'],
     cricket: ['cricket', 'sports', 'personalities'],
-    food: ['food', 'dailyLife']
+    food: ['food', 'dailyLife'],
+    festivals: ['festivals', 'dailyLife'],
+    travel: ['places', 'monuments'],
+    culture: ['dailyLife', 'clothes', 'slang', 'music'],
+    history: ['monuments', 'personalities'],
+    nature: ['animals', 'nature'],
+    memes: ['memes', 'personalities', 'bollywood'],
+    hard: ['monuments', 'personalities', 'places']
 };
 
 // Flatten words, optionally filtered by mode

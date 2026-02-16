@@ -1,9 +1,4 @@
-// ─── Chitrakaar Client ─────────────────────────────────────────────────────
-// Handles all client-side game logic: UI, Canvas, Socket.io, Avatars, Modes
-
 const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
-
-// ─── Loading Screen ──────────────────────────────────────────────────────────
 
 const loadingScreen = document.getElementById('loading-screen');
 const loadingStatus = document.getElementById('loading-status');
@@ -31,8 +26,6 @@ socket.io.on('reconnect_attempt', (attempt) => {
         loadingStatus.textContent = `Reconnecting... (attempt ${attempt})`;
     }
 });
-
-// ─── DOM Refs ────────────────────────────────────────────────────────────────
 
 const lobbyScreen = document.getElementById('lobby-screen');
 const waitingScreen = document.getElementById('waiting-screen');
@@ -74,15 +67,12 @@ const finalScores = document.getElementById('final-scores');
 const toastContainer = document.getElementById('toast-container');
 const confettiContainer = document.getElementById('confetti-container');
 
-// Mobile
 const playersPanel = document.getElementById('players-panel');
 const chatPanel = document.getElementById('chat-panel');
 const togglePlayersBtn = document.getElementById('toggle-players-btn');
 const toggleChatBtn = document.getElementById('toggle-chat-btn');
 const closePlayersBtn = document.getElementById('close-players-btn');
 const closeChatBtn = document.getElementById('close-chat-btn');
-
-// ─── State ───────────────────────────────────────────────────────────────────
 
 let myId = null;
 let roomCode = '';
@@ -99,7 +89,6 @@ let selectedAvatarId = 0;
 let currentMode = 'classic';
 let currentTurnTime = 80;
 
-// Avatar definitions matching server
 const AVATARS = [
     { id: 0, name: 'Turban', color: '#ff6b2b', label: 'Tu' },
     { id: 1, name: 'Saree', color: '#e74c3c', label: 'Sa' },
@@ -120,17 +109,20 @@ const MODE_LABELS = {
     bollywood: 'Bollywood',
     cricket: 'Cricket',
     food: 'Food',
+    festivals: 'Festivals',
+    travel: 'Travel',
+    culture: 'Culture',
+    history: 'History',
+    nature: 'Nature',
+    memes: 'Memes',
+    hard: 'Hard Mode',
     speed: 'Speed'
 };
-
-// ─── Screen Management ──────────────────────────────────────────────────────
 
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
 }
-
-// ─── Utility Functions ──────────────────────────────────────────────────────
 
 function escapeHtml(str) {
     const div = document.createElement('div');
@@ -173,8 +165,6 @@ function spawnConfetti() {
     }
 }
 
-// ─── Avatar Picker ──────────────────────────────────────────────────────────
-
 const avatarGrid = document.getElementById('avatar-grid');
 avatarGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('.avatar-option');
@@ -183,8 +173,6 @@ avatarGrid.addEventListener('click', (e) => {
     btn.classList.add('selected');
     selectedAvatarId = parseInt(btn.dataset.avatar);
 });
-
-// ─── Lobby Actions ──────────────────────────────────────────────────────────
 
 playerNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') createRoomBtn.click();
@@ -214,8 +202,6 @@ quickPlayBtn.addEventListener('click', () => {
     if (!name) { showToast('Enter your name first!', 'error'); return; }
     socket.emit('quickPlay', { playerName: name, avatarId: selectedAvatarId });
 });
-
-// ─── Waiting Room ───────────────────────────────────────────────────────────
 
 copyCodeBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(roomCode).then(() => {
@@ -276,8 +262,6 @@ function updateGamePlayerList(playerArray, drawerId) {
     }).join('');
 }
 
-// ─── Mobile Panel Toggles ───────────────────────────────────────────────────
-
 let backdrop = null;
 
 function createBackdrop() {
@@ -318,8 +302,6 @@ toggleChatBtn.addEventListener('click', () => {
 closePlayersBtn.addEventListener('click', closeAllPanels);
 closeChatBtn.addEventListener('click', closeAllPanels);
 
-// ─── Canvas Setup ───────────────────────────────────────────────────────────
-
 function resizeCanvas() {
     const area = canvas.parentElement;
     const rect = area.getBoundingClientRect();
@@ -356,8 +338,6 @@ function resizeCanvas() {
 }
 
 window.addEventListener('resize', resizeCanvas);
-
-// ─── Drawing Logic ──────────────────────────────────────────────────────────
 
 function getPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -459,8 +439,6 @@ canvas.addEventListener('touchstart', handleDrawStart, { passive: false });
 canvas.addEventListener('touchmove', handleDrawMove, { passive: false });
 canvas.addEventListener('touchend', handleDrawEnd);
 
-// ─── Drawing Tools ──────────────────────────────────────────────────────────
-
 document.getElementById('color-palette').addEventListener('click', (e) => {
     const btn = e.target.closest('.color-btn');
     if (!btn) return;
@@ -516,8 +494,6 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     socket.emit('clearCanvas');
 });
 
-// ─── Chat ───────────────────────────────────────────────────────────────────
-
 sendBtn.addEventListener('click', () => {
     const msg = chatInput.value.trim();
     if (!msg) return;
@@ -528,8 +504,6 @@ sendBtn.addEventListener('click', () => {
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendBtn.click();
 });
-
-// ─── Socket Events ──────────────────────────────────────────────────────────
 
 socket.on('connect', () => { myId = socket.id; });
 
@@ -626,19 +600,19 @@ socket.on('drawerChoosing', ({ drawerName, drawerId }) => {
     chatInput.placeholder = isMe ? "You're drawing! No chatting" : "Type your guess...";
 });
 
-// Choose Word (drawer only)
 socket.on('chooseWord', (words) => {
-    wordChoicesDiv.innerHTML = words.map(w =>
-        `<button class="word-choice-btn" data-word="${escapeHtml(w)}">${escapeHtml(w)}</button>`
-    ).join('');
-    wordChoicesDiv.classList.remove('hidden');
-
-    wordChoicesDiv.querySelectorAll('.word-choice-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            socket.emit('wordChosen', { word: btn.dataset.word });
+    wordChoicesDiv.innerHTML = '';
+    words.forEach(w => {
+        const btn = document.createElement('button');
+        btn.className = 'word-choice-btn';
+        btn.textContent = w;
+        btn.onclick = () => {
+            socket.emit('wordChosen', { word: w });
             wordChoicesDiv.classList.add('hidden');
-        });
+        };
+        wordChoicesDiv.appendChild(btn);
     });
+    wordChoicesDiv.classList.remove('hidden');
 });
 
 // Word Selected
@@ -656,6 +630,13 @@ socket.on('wordSelected', ({ word, isDrawer: isMe }) => {
         saveDrawState();
         setTimeout(resizeCanvas, 50);
     }
+});
+
+socket.on('hintRevealed', ({ hint }) => {
+    wordHint.textContent = hint;
+    wordHint.classList.add('hint-revealed');
+    setTimeout(() => wordHint.classList.remove('hint-revealed'), 500);
+    showToast('💡 Letter revealed!', 'info');
 });
 
 // Drawing events from others
