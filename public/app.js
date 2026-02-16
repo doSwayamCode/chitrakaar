@@ -328,11 +328,31 @@ function resizeCanvas() {
     const topH = topBar ? topBar.offsetHeight : 50;
     const toolH = (tools && !tools.classList.contains('hidden')) ? tools.offsetHeight : 0;
 
+    // Save current canvas content before resizing (only if canvas has content)
+    const oldWidth = canvas.width;
+    const oldHeight = canvas.height;
+    let canvasData = null;
+    
+    // Only save if canvas has been initialized (width > 0)
+    if (oldWidth > 0 && oldHeight > 0) {
+        canvasData = canvas.toDataURL();
+    }
+
     canvas.width = rect.width;
     canvas.height = rect.height - topH - toolH;
 
+    // Fill with white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Restore canvas content after resize if it existed
+    if (canvasData) {
+        const img = new Image();
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0, oldWidth, oldHeight, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = canvasData;
+    }
 }
 
 window.addEventListener('resize', resizeCanvas);
