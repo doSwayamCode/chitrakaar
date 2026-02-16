@@ -672,9 +672,22 @@ body {
 
 .game-layout {
   display: grid;
-  grid-template-columns: 220px 1fr 280px;
+  grid-template-columns: 180px 1fr 240px;
   height: 100%;
   gap: 0;
+}
+
+/* Better layout for larger screens */
+@media (min-width: 1400px) {
+  .game-layout {
+    grid-template-columns: 200px 1fr 260px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .game-layout {
+    grid-template-columns: 220px 1fr 280px;
+  }
 }
 
 .game-panel {
@@ -851,13 +864,49 @@ body {
 }
 
 .word-hint.hint-revealed {
-  animation: hintPulse 0.5s ease;
-  color: var(--accent);
+  animation: hintPulse 0.6s ease;
+  color: var(--accent-emerald);
 }
 
 @keyframes hintPulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+  50% { transform: scale(1.12); color: var(--accent-gold); }
+}
+
+/* Hint notification */
+.hint-notification {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--accent-saffron), var(--accent-gold));
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  z-index: 20;
+  animation: hintSlideIn 0.5s ease, hintFadeOut 0.5s ease 2.5s forwards;
+  box-shadow: 0 4px 20px rgba(255, 107, 43, 0.4);
+  pointer-events: none;
+}
+
+@keyframes hintSlideIn {
+  from {
+    transform: translateX(-50%) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes hintFadeOut {
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
 }
 
 /* Timer */
@@ -939,7 +988,7 @@ body {
 .overlay-content {
   text-align: center;
   padding: 20px;
-  max-width: 400px;
+  max-width: 600px;
   width: 100%;
 }
 
@@ -1166,11 +1215,21 @@ body {
   background: rgba(0, 201, 123, 0.1);
   color: var(--accent-emerald);
   font-weight: 600;
+  border-left: 3px solid var(--accent-emerald);
+  padding-left: 10px;
 }
 
 .chat-msg.close-guess {
-  background: rgba(255, 107, 43, 0.1);
-  color: var(--accent-saffron);
+  background: rgba(255, 200, 69, 0.15);
+  color: var(--accent-gold);
+  border-left: 3px solid var(--accent-gold);
+  padding-left: 10px;
+  font-weight: 600;
+}
+
+.chat-msg.close-guess::before {
+  content: "🔥 ";
+  font-size: 0.9rem;
 }
 
 .chat-msg .sender {
@@ -1215,13 +1274,13 @@ body {
 }
 
 .mobile-toggle-btn {
-  padding: 10px 22px;
+  padding: 12px 24px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 20px;
   color: var(--text-primary);
   font-family: var(--font);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1231,9 +1290,15 @@ body {
 
 .mobile-toggle-btn:hover,
 .mobile-toggle-btn.active {
-  background: rgba(255, 107, 43, 0.15);
+  background: rgba(255, 107, 43, 0.2);
   border-color: var(--accent-saffron);
   color: var(--accent-saffron);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 107, 43, 0.3);
+}
+
+.mobile-toggle-btn:active {
+  transform: translateY(0);
 }
 
 /* ─── Toast Notifications ──────────────────────────────────────────────── */
@@ -1294,12 +1359,15 @@ body {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  animation: confettiFall 1.5s ease-out forwards;
+  animation: confettiFall 2s ease-out forwards;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes confettiFall {
   0% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(-20px) rotate(0deg);
     opacity: 1;
   }
 
@@ -1340,7 +1408,7 @@ body {
 
 @media (max-width: 1100px) {
   .game-layout {
-    grid-template-columns: 180px 1fr 240px;
+    grid-template-columns: 170px 1fr 220px;
   }
 
   .player-avatar {
@@ -1433,6 +1501,39 @@ body {
   }
 }
 
+/* ─── Quick Chat Phrases ───────────────────────────────────────────────── */
+
+.quick-chat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+}
+
+.quick-chat-btn {
+  padding: 4px 10px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.quick-chat-btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 107, 43, 0.1);
+  border-color: var(--accent-saffron);
+  color: var(--accent-saffron);
+}
+
 /* ─── RESPONSIVE: <=600px — Compact mode ───────────────────────────────── */
 
 @media (max-width: 600px) {
@@ -1449,13 +1550,13 @@ body {
   }
 
   .btn {
-    padding: 11px 18px;
-    font-size: 0.88rem;
+    padding: 13px 20px;
+    font-size: 0.9rem;
   }
 
   .btn-large {
-    padding: 14px 28px;
-    font-size: 1rem;
+    padding: 16px 32px;
+    font-size: 1.05rem;
   }
 
   .avatar-grid {
@@ -1516,19 +1617,20 @@ body {
 
   /* Tools bar compact */
   .tools-bar {
-    padding: 6px 8px;
-    gap: 4px;
+    padding: 8px 10px;
+    gap: 6px;
+    min-height: 52px;
   }
 
   .color-btn {
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
   }
 
   .brush-btn {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
   }
 
   .brush-sizes {

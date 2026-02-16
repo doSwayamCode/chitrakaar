@@ -151,17 +151,29 @@ function addChatMessage(sender, message, type = 'normal') {
 }
 
 function spawnConfetti() {
-    const colors = ['#ff6b2b', '#00c97b', '#ffc845', '#4f7cff', '#ff4f9a', '#9b59b6'];
-    for (let i = 0; i < 40; i++) {
+    const colors = ['#ff6b2b', '#00c97b', '#ffc845', '#4f7cff', '#ff4f9a', '#9b59b6', '#ff914d', '#ff6347'];
+    const emojis = ['🎉', '🎊', '✨', '🔥', '💥', '⭐', '🌟', '💫'];
+    
+    for (let i = 0; i < 50; i++) {
         const piece = document.createElement('div');
         piece.className = 'confetti-piece';
         piece.style.left = Math.random() * 100 + '%';
-        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
         piece.style.animationDelay = Math.random() * 0.5 + 's';
-        piece.style.width = (Math.random() * 8 + 4) + 'px';
-        piece.style.height = piece.style.width;
+        piece.style.animationDuration = (Math.random() * 1.5 + 1.5) + 's';
+        
+        // Mix of colored squares and emojis
+        if (Math.random() > 0.3) {
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.width = (Math.random() * 10 + 6) + 'px';
+            piece.style.height = piece.style.width;
+        } else {
+            piece.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            piece.style.background = 'transparent';
+            piece.style.fontSize = (Math.random() * 8 + 12) + 'px';
+        }
+        
         confettiContainer.appendChild(piece);
-        setTimeout(() => piece.remove(), 2000);
+        setTimeout(() => piece.remove(), 3000);
     }
 }
 
@@ -494,6 +506,14 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     socket.emit('clearCanvas');
 });
 
+document.getElementById('save-btn').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `chitrakaar-drawing-${Date.now()}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+    showToast('Drawing saved! 📥', 'success');
+});
+
 sendBtn.addEventListener('click', () => {
     const msg = chatInput.value.trim();
     if (!msg) return;
@@ -503,6 +523,14 @@ sendBtn.addEventListener('click', () => {
 
 chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') sendBtn.click();
+});
+
+// Quick Chat functionality
+document.getElementById('quick-chat').addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-chat-btn');
+    if (!btn || isDrawer || chatInput.disabled) return;
+    const msg = btn.dataset.msg;
+    socket.emit('chatMessage', { message: msg });
 });
 
 socket.on('connect', () => { myId = socket.id; });
@@ -635,8 +663,16 @@ socket.on('wordSelected', ({ word, isDrawer: isMe }) => {
 socket.on('hintRevealed', ({ hint }) => {
     wordHint.textContent = hint;
     wordHint.classList.add('hint-revealed');
-    setTimeout(() => wordHint.classList.remove('hint-revealed'), 500);
-    showToast('💡 Letter revealed!', 'info');
+    setTimeout(() => wordHint.classList.remove('hint-revealed'), 600);
+    
+    // Show notification overlay
+    const notification = document.createElement('div');
+    notification.className = 'hint-notification';
+    notification.textContent = '💡 Letter revealed!';
+    document.querySelector('.canvas-area').appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+    
+    showToast('💡 Hint revealed!', 'info');
 });
 
 // Drawing events from others
@@ -670,8 +706,12 @@ socket.on('correctGuess', ({ playerName, playerId, score, scores }) => {
 
     if (playerId === myId) {
         spawnConfetti();
+        playSuccessSound();
         chatInput.disabled = true;
-        chatInput.placeholder = "You guessed it!";
+        chatInput.placeholder = "You guessed it! 🎉";
+        showToast('🎉 Shabash! You got it!', 'success');
+    } else {
+        showToast(`${playerName} guessed the word!`, 'info');
     }
 });
 
@@ -705,6 +745,36 @@ function playTickSound(timeLeft) {
 
         oscillator.start(ctx.currentTime);
         oscillator.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+        // Audio not supported
+    }
+}
+
+function playSuccessSound() {
+    try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        // Play a cheerful ascending tone
+        const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+        notes.forEach((freq, i) => {
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.frequency.setValueAtTime(freq, ctx.currentTime);
+            oscillator.type = 'sine';
+
+            const startTime = ctx.currentTime + (i * 0.1);
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + 0.25);
+        });
     } catch (e) {
         // Audio not supported
     }
