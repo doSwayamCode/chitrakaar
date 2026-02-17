@@ -61,7 +61,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none; /* Disable pull-to-refresh on mobile */
-  position: fixed; /* Prevent bouncing on iOS */
   width: 100%;
 }
 
