@@ -17,8 +17,14 @@ const io = new Server(server, {
 app.use(compression());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
-    maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
-    etag: true
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+    etag: true,
+    setHeaders: (res, path) => {
+        // No cache for HTML, CSS, JS to ensure updates apply immediately
+        if (path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        }
+    }
 }));
 
 // Admin authentication middleware
