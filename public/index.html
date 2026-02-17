@@ -48,11 +48,26 @@
     content="Free multiplayer Indian drawing game! Play with friends, guess Bollywood, cricket, festivals & more. Create a room & start drawing now! 🇮🇳" />
   <meta name="twitter:image" content="https://chitrakaar.com/twitter-card.png" />
 
+  <!-- WhatsApp Preview -->
+  <meta property="og:image:alt" content="Chitrakaar game preview showing drawing canvas and Indian themed words" />
+
   <!-- Additional SEO -->
   <meta name="application-name" content="Chitrakaar" />
   <meta name="apple-mobile-web-app-title" content="Chitrakaar" />
   <meta name="format-detection" content="telephone=no" />
 
+  <!-- Alternate Language Tags -->
+  <link rel="alternate" hreflang="en" href="https://chitrakaar.com/?lang=en" />
+  <link rel="alternate" hreflang="hi" href="https://chitrakaar.com/?lang=hi" />
+  <link rel="alternate" hreflang="te" href="https://chitrakaar.com/?lang=te" />
+  <link rel="alternate" hreflang="mr" href="https://chitrakaar.com/?lang=mr" />
+  <link rel="alternate" hreflang="bn" href="https://chitrakaar.com/?lang=bn" />
+  <link rel="alternate" hreflang="kn" href="https://chitrakaar.com/?lang=kn" />
+  <link rel="alternate" hreflang="x-default" href="https://chitrakaar.com/" />
+
+  <!-- Performance Optimization -->
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="preload" href="style.css?v=3.0" as="style" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -97,6 +112,65 @@
     }
   }
   </script>
+
+  <!-- FAQ Schema for Rich Snippets -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [{
+      "@type": "Question",
+      "name": "Is Chitrakaar free to play?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes! Chitrakaar is completely free to play. No downloads or payments required."
+      }
+    }, {
+      "@type": "Question",
+      "name": "How many players can play Chitrakaar?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Chitrakaar supports 2-12 players per room for multiplayer drawing and guessing."
+      }
+    }, {
+      "@type": "Question",
+      "name": "What kind of words are used in Chitrakaar?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Chitrakaar features Indian themes including Bollywood movies, cricket, festivals, food, places, and cultural references."
+      }
+    }, {
+      "@type": "Question",
+      "name": "Does Chitrakaar work on mobile?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes! Chitrakaar is fully optimized for mobile devices and tablets with touch-friendly drawing controls."
+      }
+    }]
+  }
+  </script>
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYKDYFR78"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    
+    // Initialize Google Analytics
+    gtag('config', 'G-WPYKDYFR78', {
+      'send_page_view': true,
+      'anonymize_ip': true,
+      'cookie_flags': 'SameSite=None;Secure'
+    });
+    
+    // Helper function for custom events (accessible globally)
+    window.trackEvent = function(eventName, eventParams = {}) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', eventName, eventParams);
+      }
+    };
+  </script>
 </head>
 
 <body>
@@ -130,7 +204,7 @@
       </div>
 
       <div class="logo-section">
-        <img src="chitrakaar-logo.png" alt="Chitrakaar" class="logo-image" />
+        <img src="chitrakaar-logo.png" alt="Chitrakaar - Indian Draw and Guess Game Logo" class="logo-image" />
         <p class="tagline">Draw &amp; Guess, Desi Style!</p>
       </div>
 

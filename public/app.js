@@ -715,6 +715,15 @@ socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray, tot
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
+    
+    // Track room creation
+    if (typeof window.trackEvent === 'function') {
+        window.trackEvent('room_created', {
+            game_mode: currentMode,
+            is_public: pub,
+            total_rounds: totalRounds
+        });
+    }
     // Update rounds selector
     if (totalRounds) {
         roundsSelect.value = totalRounds;
@@ -728,6 +737,15 @@ socket.on('roomJoined', ({ code, mode, isPublic: pub, players: playerArray, tota
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
+    
+    // Track room joining
+    if (typeof window.trackEvent === 'function') {
+        window.trackEvent('room_joined', {
+            game_mode: currentMode,
+            player_count: playerArray.length,
+            total_rounds: totalRounds
+        });
+    }
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
@@ -776,6 +794,16 @@ socket.on('gameStarted', ({ round, totalRounds, drawerName, drawerId, mode, turn
     currentTurnTime = turnTime || 80;
     showScreen('game-screen');
     setTimeout(resizeCanvas, 50);
+    
+    // Track game start
+    if (typeof window.trackEvent === 'function') {
+        window.trackEvent('game_started', {
+            game_mode: currentMode,
+            player_count: players.length,
+            total_rounds: totalRounds,
+            turn_time: turnTime
+        });
+    }
 
     roundText.textContent = `Round ${round}/${totalRounds}`;
     modeLabel.textContent = MODE_LABELS[currentMode] || 'Classic';
@@ -1017,6 +1045,17 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
     if (myPlayer && typeof savePlayerStats === 'function') {
         savePlayerStats(myPlayer.name, myPlayer.score, currentMode);
     }
+    
+    // Track game completion
+    if (typeof window.trackEvent === 'function') {
+        window.trackEvent('game_completed', {
+            game_mode: currentMode,
+            player_count: sortedPlayers.length,
+            final_score: myPlayer ? myPlayer.score : 0,
+            placement: sortedPlayers.findIndex(p => p.id === myId) + 1,
+            won_game: winner.id === myId
+        });
+    }
 
     if (winner.id === myId) {
         spawnConfetti();
@@ -1030,6 +1069,14 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
 socket.on('gameEnded', ({ message }) => {
     showToast(message, 'error');
     showScreen('waiting-screen');
+    
+    // Track game cancellation
+    if (typeof window.trackEvent === 'function') {
+        window.trackEvent('game_cancelled', {
+            game_mode: currentMode,
+            reason: 'not_enough_players'
+        });
+    }
     if (players.length > 0) {
         updateWaitingRoom(players);
     }

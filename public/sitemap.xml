@@ -7,7 +7,7 @@
   <!-- Homepage -->
   <url>
     <loc>https://chitrakaar.com/</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2026-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <mobile:mobile/>
@@ -22,7 +22,7 @@
   <!-- About (future page) -->
   <url>
     <loc>https://chitrakaar.com/about</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2026-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -30,7 +30,7 @@
   <!-- How to Play (future page) -->
   <url>
     <loc>https://chitrakaar.com/how-to-play</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2026-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -38,7 +38,7 @@
   <!-- Privacy Policy (future page) -->
   <url>
     <loc>https://chitrakaar.com/privacy</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2026-02-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
@@ -46,7 +46,7 @@
   <!-- Terms of Service (future page) -->
   <url>
     <loc>https://chitrakaar.com/terms</loc>
-    <lastmod>2024-01-15</lastmod>
+    <lastmod>2026-02-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
