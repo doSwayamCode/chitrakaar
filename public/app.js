@@ -122,6 +122,14 @@ const MODE_LABELS = {
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
+    
+    // Resize canvas when showing game screen
+    if (screenId === 'game-screen') {
+        // Use multiple resize calls with delays to ensure proper sizing
+        setTimeout(() => resizeCanvas(), 10);
+        setTimeout(() => resizeCanvas(), 100);
+        setTimeout(() => resizeCanvas(), 300);
+    }
 }
 
 function escapeHtml(str) {
@@ -316,11 +324,21 @@ closeChatBtn.addEventListener('click', closeAllPanels);
 
 function resizeCanvas() {
     const area = canvas.parentElement;
+    
+    // Force reflow to get accurate measurements
+    area.style.display = 'none';
+    area.offsetHeight; // trigger reflow
+    area.style.display = '';
+    
     const rect = area.getBoundingClientRect();
     const topBar = area.querySelector('.game-top-bar');
     const tools = area.querySelector('.tools-bar');
     const topH = topBar ? topBar.offsetHeight : 50;
     const toolH = (tools && !tools.classList.contains('hidden')) ? tools.offsetHeight : 0;
+
+    // Calculate available space explicitly
+    const availableWidth = Math.floor(rect.width);
+    const availableHeight = Math.floor(rect.height - topH - toolH);
 
     // Save current canvas content before resizing (only if canvas has content)
     const oldWidth = canvas.width;
@@ -332,8 +350,9 @@ function resizeCanvas() {
         canvasData = canvas.toDataURL();
     }
 
-    canvas.width = rect.width;
-    canvas.height = rect.height - topH - toolH;
+    // Set canvas dimensions to fill available space
+    canvas.width = availableWidth;
+    canvas.height = availableHeight;
 
     // Fill with white background
     ctx.fillStyle = '#ffffff';
@@ -347,9 +366,19 @@ function resizeCanvas() {
         };
         img.src = canvasData;
     }
+    
+    console.log(`Canvas resized to ${canvas.width}x${canvas.height} (container: ${rect.width}x${rect.height})`);
 }
 
-window.addEventListener('resize', resizeCanvas);
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        resizeCanvas();
+        // Call again after a short delay to ensure proper sizing
+        setTimeout(resizeCanvas, 50);
+    }, 100);
+});
 
 function getPos(e) {
     const rect = canvas.getBoundingClientRect();
