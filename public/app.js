@@ -398,10 +398,11 @@ function updateGamePlayerList(playerArray, drawerId) {
         if (dataId) guessedIds.push(dataId);
     });
 
-    gamePlayerList.innerHTML = playerArray.map((p) => {
+    gamePlayerList.innerHTML = playerArray.map((p, index) => {
         const isCurrentDrawer = p.id === drawerId;
         const hasGuessed = guessedIds.includes(p.id);
         const avatar = AVATARS[p.avatarId || 0];
+        const rank = index + 1;
 
         let statusText = '';
         if (isCurrentDrawer) statusText = 'Drawing';
@@ -409,6 +410,7 @@ function updateGamePlayerList(playerArray, drawerId) {
 
         return `
       <div class="game-player-item ${isCurrentDrawer ? 'drawing' : ''} ${hasGuessed ? 'guessed' : ''}" data-id="${p.id}">
+        <div class="player-rank">#${rank}</div>
         <div class="player-avatar" style="background:${avatar.color}">${avatar.label}</div>
         <div class="player-info">
           <div class="player-name">${escapeHtml(p.name)}${p.id === myId ? ' (You)' : ''}</div>
