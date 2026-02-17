@@ -28,6 +28,31 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
 });
 
+// ─── Prevent Pull-to-Refresh on Mobile ────────────────────────────────────
+// Prevent the default pull-to-refresh behavior that can interrupt gameplay
+let touchStartY = 0;
+
+document.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+    const touchY = e.touches[0].clientY;
+    const touchDiff = touchY - touchStartY;
+    
+    // If user is at the top of the page and trying to scroll down (pull-to-refresh)
+    if (touchDiff > 0 && window.scrollY === 0) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Prevent overscroll/bounce effect on iOS
+document.addEventListener('touchmove', (e) => {
+    if (e.scale !== 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
 // ──────────────────────────────────────────────────────────────────────────
 
 const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000 });

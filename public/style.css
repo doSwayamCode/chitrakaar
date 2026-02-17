@@ -43,6 +43,7 @@ html {
   height: 100%;
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  overscroll-behavior: none; /* Prevent pull-to-refresh */
 }
 
 body {
@@ -54,6 +55,9 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none; /* Disable pull-to-refresh on mobile */
+  position: fixed; /* Prevent bouncing on iOS */
+  width: 100%;
 }
 
 /* Improved focus states for accessibility */
@@ -1114,6 +1118,8 @@ body {
   overflow: hidden;
   width: 100vw;
   max-width: 100%;
+  overscroll-behavior: none; /* Prevent pull-to-refresh during gameplay */
+  touch-action: pan-y pinch-zoom; /* Allow vertical scroll but prevent refresh */
 }
 
 .game-layout {
