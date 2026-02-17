@@ -15,10 +15,52 @@ const io = new Server(server, {
 });
 
 app.use(compression());
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
     maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
     etag: true
 }));
+
+// Admin authentication middleware
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'chitrakaar2026';
+
+function adminAuth(req, res, next) {
+    const auth = req.headers.authorization;
+    if (!auth || auth !== `Bearer ${ADMIN_PASSWORD}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    next();
+}
+
+// Admin routes
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/api/analytics', adminAuth, (req, res) => {
+    const currentConnections = io.sockets.sockets.size;
+    analytics.peakConcurrent = Math.max(analytics.peakConcurrent, currentConnections);
+    
+    const today = new Date().toDateString();
+    const todayStats = analytics.dailyStats[today] || { games: 0, players: new Set() };
+    
+    res.json({
+        totalGames: analytics.totalGames,
+        totalPlayers: analytics.totalPlayers.size,
+        gamesPerMode: analytics.gamesPerMode,
+        dailyStats: Object.keys(analytics.dailyStats).map(date => ({
+            date,
+            games: analytics.dailyStats[date].games,
+            players: analytics.dailyStats[date].players.size
+        })),
+        hourlyStats: analytics.hourlyStats,
+        currentConnections,
+        peakConcurrent: analytics.peakConcurrent,
+        activeRooms: rooms.size,
+        todayGames: todayStats.games,
+        todayPlayers: todayStats.players.size
+    });
+});
 
 const AVATARS = [
     { id: 0, name: 'Turban', color: '#ff6b2b' },
@@ -56,6 +98,43 @@ const rooms = new Map();
 const publicRooms = new Set();
 const MAX_ROOMS = 1000;
 
+// Analytics tracking
+const analytics = {
+    totalGames: 0,
+    totalPlayers: new Set(),
+    gamesPerMode: {},
+    dailyStats: {},
+    hourlyStats: Array(24).fill(0),
+    connections: 0,
+    peakConcurrent: 0
+};
+
+function trackGame(mode) {
+    analytics.totalGames++;
+    if (!analytics.gamesPerMode[mode]) {
+        analytics.gamesPerMode[mode] = 0;
+    }
+    analytics.gamesPerMode[mode]++;
+    
+    const today = new Date().toDateString();
+    if (!analytics.dailyStats[today]) {
+        analytics.dailyStats[today] = { games: 0, players: new Set() };
+    }
+    analytics.dailyStats[today].games++;
+    
+    const hour = new Date().getHours();
+    analytics.hourlyStats[hour]++;
+}
+
+function trackPlayer(playerId) {
+    analytics.totalPlayers.add(playerId);
+    const today = new Date().toDateString();
+    if (!analytics.dailyStats[today]) {
+        analytics.dailyStats[today] = { games: 0, players: new Set() };
+    }
+    analytics.dailyStats[today].players.add(playerId);
+}
+
 function generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
@@ -63,7 +142,7 @@ function generateRoomCode() {
     return rooms.has(code) ? generateRoomCode() : code;
 }
 
-function createRoom(hostId, hostName, avatarId, mode = 'classic', isPublic = false) {
+function createRoom(hostId, hostName, avatarId, mode = 'classic', isPublic = false, customRounds = null) {
     const code = generateRoomCode();
     const modeConfig = GAME_MODES[mode] || GAME_MODES.classic;
     const room = {
@@ -73,7 +152,7 @@ function createRoom(hostId, hostName, avatarId, mode = 'classic', isPublic = fal
         mode: mode,
         isPublic: isPublic,
         currentRound: 0,
-        totalRounds: modeConfig.rounds,
+        totalRounds: customRounds || modeConfig.rounds,
         turnTime: modeConfig.turnTime,
         currentDrawerIndex: 0,
         currentWord: null,
@@ -334,6 +413,10 @@ function startGame(room) {
     room.players.forEach(p => p.score = 0);
     publicRooms.delete(room.code); // remove from public pool when game starts
 
+    // Track analytics
+    trackGame(room.mode);
+    room.players.forEach(p => trackPlayer(p.id));
+
     io.to(room.code).emit('gameStarted', {
         round: 1,
         totalRounds: room.totalRounds,
@@ -418,7 +501,12 @@ function rateLimit(socketId, type, maxPerSecond) {
 io.on('connection', (socket) => {
     let currentRoom = null;
 
-    socket.on('createRoom', ({ playerName, avatarId, mode, isPublic }) => {
+    // Track connections
+    analytics.connections++;
+    const currentConnections = io.sockets.sockets.size;
+    analytics.peakConcurrent = Math.max(analytics.peakConcurrent, currentConnections);
+
+    socket.on('createRoom', ({ playerName, avatarId, mode, isPublic, rounds }) => {
         if (rooms.size >= MAX_ROOMS) {
             socket.emit('error', { message: 'Server is at capacity. Please try again later.' });
             return;
@@ -430,8 +518,9 @@ io.on('connection', (socket) => {
         }
         const validMode = GAME_MODES[mode] ? mode : 'classic';
         const validAvatar = (typeof avatarId === 'number' && avatarId >= 0 && avatarId < AVATARS.length) ? avatarId : 0;
+        const validRounds = (typeof rounds === 'number' && rounds >= 3 && rounds <= 10) ? rounds : null;
 
-        const room = createRoom(socket.id, name, validAvatar, validMode, !!isPublic);
+        const room = createRoom(socket.id, name, validAvatar, validMode, !!isPublic, validRounds);
         currentRoom = room.code;
         socket.join(room.code);
 
@@ -439,6 +528,7 @@ io.on('connection', (socket) => {
             code: room.code,
             mode: room.mode,
             isPublic: room.isPublic,
+            totalRounds: room.totalRounds,
             players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
         });
     });
@@ -474,6 +564,7 @@ io.on('connection', (socket) => {
             code: room.code,
             mode: room.mode,
             isPublic: room.isPublic,
+            totalRounds: room.totalRounds,
             players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
         });
 
@@ -557,6 +648,25 @@ io.on('connection', (socket) => {
 
         if (!startGame(room)) {
             socket.emit('error', { message: 'Need at least 2 players to start!' });
+        }
+    });
+
+    socket.on('updateRounds', ({ rounds }) => {
+        if (!currentRoom) return;
+        const room = rooms.get(currentRoom);
+        if (!room || room.state !== 'waiting') return;
+
+        // Only host can update rounds
+        if (room.players[0].id !== socket.id) {
+            socket.emit('error', { message: 'Only the host can change settings!' });
+            return;
+        }
+
+        // Validate rounds (3-10)
+        if (typeof rounds === 'number' && rounds >= 3 && rounds <= 10) {
+            room.totalRounds = rounds;
+            // Broadcast updated rounds to all players in room
+            io.to(room.code).emit('roundsUpdated', { totalRounds: rounds });
         }
     });
 

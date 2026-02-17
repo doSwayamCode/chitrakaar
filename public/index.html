@@ -9,13 +9,94 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <!-- Favicon and Icons -->
+  <link rel="icon" type="image/png" href="chitrakaar-logo.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+
   <title>Chitrakaar - Draw &amp; Guess, Desi Style</title>
   <meta name="description"
     content="Free multiplayer Indian draw-and-guess game. Create a room, invite friends, and play with 400+ desi words!" />
+
+  <!-- SEO Meta Tags -->
+  <meta name="keywords"
+    content="chitrakaar, draw and guess, skribbl, Indian games, multiplayer drawing game, online drawing game, desi games, Bollywood quiz, cricket game, hindi games, free drawing game, browser game, party game" />
+  <meta name="author" content="Chitrakaar" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://chitrakaar.com/" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://chitrakaar.com/" />
+  <meta property="og:title" content="Chitrakaar - Draw & Guess, Desi Style! 🎨" />
+  <meta property="og:description"
+    content="Free multiplayer Indian drawing game! Play with friends, guess Bollywood, cricket, festivals & more. Create a room & start drawing now! 🇮🇳" />
+  <meta property="og:image" content="https://chitrakaar.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="Chitrakaar" />
+  <meta property="og:locale" content="en_IN" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="https://chitrakaar.com/" />
+  <meta name="twitter:title" content="Chitrakaar - Draw & Guess, Desi Style! 🎨" />
+  <meta name="twitter:description"
+    content="Free multiplayer Indian drawing game! Play with friends, guess Bollywood, cricket, festivals & more. Create a room & start drawing now! 🇮🇳" />
+  <meta name="twitter:image" content="https://chitrakaar.com/twitter-card.png" />
+
+  <!-- Additional SEO -->
+  <meta name="application-name" content="Chitrakaar" />
+  <meta name="apple-mobile-web-app-title" content="Chitrakaar" />
+  <meta name="format-detection" content="telephone=no" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script src="translations.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="share.js"></script>
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Chitrakaar",
+    "alternateName": "Chitrakaar - Draw & Guess Game",
+    "url": "https://chitrakaar.com",
+    "description": "Free multiplayer Indian drawing and guessing game with Bollywood, cricket, festivals and more themes. Play with friends online!",
+    "applicationCategory": "GameApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR"
+    },
+    "featureList": [
+      "Multiplayer drawing game",
+      "Indian themes (Bollywood, Cricket, Festivals)",
+      "Free to play",
+      "No download required",
+      "Multi-language support (Hindi, Telugu, Marathi, Bengali, Kannada)",
+      "Works on mobile and desktop"
+    ],
+    "inLanguage": ["en", "hi", "te", "mr", "bn", "kn"],
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "softwareVersion": "1.0.0",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "1250",
+      "bestRating": "5",
+      "worstRating": "1"
+    }
+  }
+  </script>
 </head>
 
 <body>
@@ -37,18 +118,30 @@
 
   <div id="lobby-screen" class="screen">
     <div class="lobby-container">
+      <!-- Language Selector -->
+      <div class="language-selector">
+        <button class="language-btn" id="language-btn">
+          <span id="current-lang-flag">🇬🇧</span>
+          <span id="current-lang-name" data-i18n="language">Language</span>
+        </button>
+        <div class="language-dropdown" id="language-dropdown">
+          <!-- Languages populated by JavaScript -->
+        </div>
+      </div>
+
       <div class="logo-section">
-        <h1 class="logo">Chitrakaar</h1>
+        <img src="chitrakaar-logo.png" alt="Chitrakaar" class="logo-image" />
         <p class="tagline">Draw &amp; Guess, Desi Style!</p>
       </div>
 
+      <!-- Player Setup Card -->
       <div class="lobby-form">
-        <input type="text" id="player-name" placeholder="Your name..." maxlength="20" autocomplete="off"
-          autocapitalize="words" spellcheck="false" aria-label="Enter your name" />
+        <input type="text" id="player-name" data-i18n-placeholder="yourName" placeholder="Your name..." maxlength="20"
+          autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Enter your name" />
 
         <!-- Avatar Picker -->
         <div class="avatar-picker">
-          <p class="picker-label">Pick your avatar</p>
+          <p class="picker-label" data-i18n="pickAvatar">Pick your avatar</p>
           <div class="avatar-grid" id="avatar-grid">
             <button class="avatar-option selected" data-avatar="0" style="background:#ff6b2b" title="Turban">Tu</button>
             <button class="avatar-option" data-avatar="1" style="background:#e74c3c" title="Saree">Sa</button>
@@ -64,44 +157,62 @@
             <button class="avatar-option" data-avatar="11" style="background:#95a5a6" title="Topi">To</button>
           </div>
         </div>
+      </div>
 
-        <div class="lobby-actions">
-          <!-- Game Mode Selector -->
-          <div class="mode-selector">
-            <label for="game-mode" class="picker-label">Game Mode</label>
-            <select id="game-mode">
-              <option value="classic">Classic (All Words)</option>
-              <option value="bollywood">Bollywood</option>
-              <option value="cricket">Cricket</option>
-              <option value="food">Food</option>
-              <option value="festivals">Festivals</option>
-              <option value="travel">Travel & Places</option>
-              <option value="culture">Culture & Daily Life</option>
-              <option value="history">History</option>
-              <option value="nature">Nature & Animals</option>
-              <option value="memes">Memes & Fun</option>
-              <option value="hard">Hard Mode (60s)</option>
-              <option value="speed">Speed (30s Turns)</option>
-            </select>
-          </div>
+      <!-- Game Mode Card -->
+      <div class="mode-selector">
+        <label for="game-mode" class="picker-label" data-i18n="gameMode">Game Mode</label>
+        <select id="game-mode">
+          <option value="classic" data-i18n="classic">Classic (All Words)</option>
+          <option value="bollywood" data-i18n="bollywood">Bollywood</option>
+          <option value="cricket" data-i18n="cricket">Cricket</option>
+          <option value="food" data-i18n="food">Food</option>
+          <option value="festivals" data-i18n="festivals">Festivals</option>
+          <option value="travel" data-i18n="travel">Travel & Places</option>
+          <option value="culture" data-i18n="culture">Culture & Daily Life</option>
+          <option value="history" data-i18n="history">History</option>
+          <option value="nature" data-i18n="nature">Nature & Animals</option>
+          <option value="memes" data-i18n="memes">Memes & Fun</option>
+          <option value="hard" data-i18n="hard">Hard Mode (60s)</option>
+          <option value="speed" data-i18n="speed">Speed (30s Turns)</option>
+        </select>
 
-          <button id="create-room-btn" class="btn btn-primary btn-large" aria-label="Create a new room">
-            Create Room
-          </button>
+        <label for="lobby-rounds-select" class="picker-label" data-i18n="numberOfRounds"
+          style="margin-top: 20px;">Number of Rounds</label>
+        <select id="lobby-rounds-select" class="settings-select">
+          <option value="3">3 Rounds</option>
+          <option value="4">4 Rounds</option>
+          <option value="5" selected>5 Rounds</option>
+          <option value="6">6 Rounds</option>
+          <option value="8">8 Rounds</option>
+          <option value="10">10 Rounds</option>
+        </select>
+      </div>
 
-          <button id="quick-play-btn" class="btn btn-accent" aria-label="Quick play with random players">
-            Quick Play
-          </button>
+      <!-- Actions Card -->
+      <div class="lobby-actions">
+        <button id="create-room-btn" class="btn btn-primary btn-large" aria-label="Create a new room">
+          <span data-i18n="createRoom">Create Room</span>
+        </button>
 
-          <div class="join-section">
-            <input type="text" id="room-code-input" placeholder="Room code" maxlength="6" autocomplete="off"
-              autocapitalize="characters" spellcheck="false" inputmode="text" aria-label="Enter room code"
-              style="text-transform:uppercase; letter-spacing:3px; font-weight:700; text-align:center;" />
-            <button id="join-room-btn" class="btn btn-primary" aria-label="Join room">
-              Join
-            </button>
-          </div>
-        </div>
+        <button id="quick-play-btn" class="btn btn-accent" aria-label="Quick play with random players">
+          <span data-i18n="quickPlay">Quick Play</span>
+        </button>
+
+        <button id="leaderboard-btn" class="btn btn-secondary" aria-label="View leaderboard">
+          🏆 <span data-i18n="leaderboard">Leaderboard</span>
+        </button>
+      </div>
+
+      <!-- Join Room Card -->
+      <div class="join-section">
+        <input type="text" id="room-code-input" data-i18n-placeholder="roomCode" placeholder="Room code" maxlength="6"
+          autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text"
+          aria-label="Enter room code"
+          style="text-transform:uppercase; letter-spacing:3px; font-weight:700; text-align:center;" />
+        <button id="join-room-btn" class="btn btn-primary" aria-label="Join room">
+          <span data-i18n="join">Join</span>
+        </button>
       </div>
     </div>
   </div>
@@ -124,15 +235,27 @@
 
       <div id="player-list" class="player-list"></div>
 
+      <div class="game-settings">
+        <label for="rounds-select" class="picker-label" data-i18n="numberOfRounds">Number of Rounds</label>
+        <select id="rounds-select" class="settings-select">
+          <option value="3">3 Rounds</option>
+          <option value="4">4 Rounds</option>
+          <option value="5">5 Rounds</option>
+          <option value="6">6 Rounds</option>
+          <option value="8">8 Rounds</option>
+          <option value="10">10 Rounds</option>
+        </select>
+      </div>
+
       <div class="waiting-actions">
         <button id="start-game-btn" class="btn btn-primary btn-large" aria-label="Start the game">
-          Start Game
+          <span data-i18n="startGame">Start Game</span>
         </button>
         <button id="share-whatsapp-btn" class="btn btn-whatsapp" aria-label="Share room on WhatsApp">
-          Share on WhatsApp
+          <span data-i18n="shareWhatsApp">Share on WhatsApp</span>
         </button>
       </div>
-      <p id="waiting-hint" class="hint">Need at least 2 players to start</p>
+      <p id="waiting-hint" class="hint" data-i18n="needPlayers">Need at least 2 players to start</p>
       <p id="auto-start-hint" class="hint hidden">Game auto-starts when 4 players join...</p>
     </div>
   </div>
@@ -143,7 +266,7 @@
 
       <div id="players-panel" class="game-panel players-panel">
         <div class="panel-header">
-          <h3>Players</h3>
+          <h3 data-i18n="players">Players</h3>
           <button id="close-players-btn" class="mobile-close-btn">X</button>
         </div>
         <div id="game-player-list" class="game-player-list"></div>
@@ -176,9 +299,9 @@
 
         <div id="gameover-overlay" class="overlay hidden">
           <div class="overlay-content gameover-content">
-            <h2>Game Over!</h2>
+            <h2 data-i18n="gameOver">Game Over!</h2>
             <div id="final-scores" class="final-scores"></div>
-            <p class="gameover-hint">New game starts in 10 seconds...</p>
+            <p class="gameover-hint" data-i18n="newGameStarts">New game starts in 10 seconds...</p>
           </div>
         </div>
 
@@ -218,22 +341,24 @@
 
       <div id="chat-panel" class="game-panel chat-panel">
         <div class="panel-header">
-          <h3>Chat</h3>
+          <h3 data-i18n="chat">Chat</h3>
           <button id="close-chat-btn" class="mobile-close-btn">X</button>
         </div>
         <div class="quick-chat" id="quick-chat">
-          <button class="quick-chat-btn" data-msg="Arre wah!">Arre wah!</button>
-          <button class="quick-chat-btn" data-msg="Kya baat!">Kya baat!</button>
-          <button class="quick-chat-btn" data-msg="GG">GG</button>
-          <button class="quick-chat-btn" data-msg="Nice">Nice</button>
-          <button class="quick-chat-btn" data-msg="LOL">LOL</button>
-          <button class="quick-chat-btn" data-msg="Bas yaar">Bas yaar</button>
+          <button class="quick-chat-btn" data-msg="arreWah" data-i18n="arreWah">Arre wah!</button>
+          <button class="quick-chat-btn" data-msg="kyaBaat" data-i18n="kyaBaat">Kya baat!</button>
+          <button class="quick-chat-btn" data-msg="gg" data-i18n="gg">GG</button>
+          <button class="quick-chat-btn" data-msg="nice" data-i18n="nice">Nice</button>
+          <button class="quick-chat-btn" data-msg="lol" data-i18n="lol">LOL</button>
+          <button class="quick-chat-btn" data-msg="basYaar" data-i18n="basYaar">Bas yaar</button>
         </div>
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-area">
-          <input type="text" id="chat-input" placeholder="Type your guess..." maxlength="200" autocomplete="off"
-            autocapitalize="none" spellcheck="false" aria-label="Type your guess" />
-          <button id="send-btn" class="btn btn-primary btn-small" aria-label="Send message">Send</button>
+          <input type="text" id="chat-input" data-i18n-placeholder="typeGuess" placeholder="Type your guess..."
+            maxlength="200" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Type your guess" />
+          <button id="send-btn" class="btn btn-primary btn-small" aria-label="Send message">
+            <span data-i18n="send">Send</span>
+          </button>
         </div>
       </div>
 

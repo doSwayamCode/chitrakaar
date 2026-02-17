@@ -1,3 +1,35 @@
+// ─── PWA Service Worker Registration ─────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('ServiceWorker registered:', registration.scope);
+            })
+            .catch(error => {
+                console.log('ServiceWorker registration failed:', error);
+            });
+    });
+}
+
+// ─── PWA Install Prompt ───────────────────────────────────────────────────
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later
+    deferredPrompt = e;
+    // Show install button (we can add this later to UI)
+    console.log('PWA install prompt available');
+});
+
+window.addEventListener('appinstalled', () => {
+    console.log('PWA installed successfully');
+    deferredPrompt = null;
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+
 const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
 
 const loadingScreen = document.getElementById('loading-screen');
@@ -36,6 +68,7 @@ const roomCodeInput = document.getElementById('room-code-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const joinRoomBtn = document.getElementById('join-room-btn');
 const quickPlayBtn = document.getElementById('quick-play-btn');
+const leaderboardBtn = document.getElementById('leaderboard-btn');
 const gameModeSelect = document.getElementById('game-mode');
 
 const displayRoomCode = document.getElementById('display-room-code');
@@ -194,6 +227,72 @@ avatarGrid.addEventListener('click', (e) => {
     selectedAvatarId = parseInt(btn.dataset.avatar);
 });
 
+// ─── Language Selector ────────────────────────────────────────────────────
+const languageBtn = document.getElementById('language-btn');
+const languageDropdown = document.getElementById('language-dropdown');
+const currentLangFlag = document.getElementById('current-lang-flag');
+const currentLangName = document.getElementById('current-lang-name');
+
+function initializeLanguageSelector() {
+    // Populate language options
+    const languages = getLanguages();
+    languageDropdown.innerHTML = languages.map(lang => `
+        <button class="language-option ${lang.code === currentLanguage ? 'selected' : ''}" data-lang="${lang.code}">
+            <span class="language-option-flag">${lang.flag}</span>
+            <span class="language-option-name">${lang.name}</span>
+        </button>
+    `).join('');
+    
+    // Update current language display
+    const current = languages.find(l => l.code === currentLanguage);
+    if (current) {
+        currentLangFlag.textContent = current.flag;
+        currentLangName.textContent = current.name;
+    }
+    
+    // Toggle dropdown
+    languageBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        languageDropdown.classList.toggle('show');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.language-selector')) {
+            languageDropdown.classList.remove('show');
+        }
+    });
+    
+    // Language selection
+    languageDropdown.addEventListener('click', (e) => {
+        const option = e.target.closest('.language-option');
+        if (!option) return;
+        
+        const langCode = option.dataset.lang;
+        setLanguage(langCode);
+        
+        // Update UI
+        const selectedLang = languages.find(l => l.code === langCode);
+        if (selectedLang) {
+            currentLangFlag.textContent = selectedLang.flag;
+            currentLangName.textContent = selectedLang.name;
+        }
+        
+        // Update selected state
+        languageDropdown.querySelectorAll('.language-option').forEach(opt => {
+            opt.classList.toggle('selected', opt.dataset.lang === langCode);
+        });
+        
+        languageDropdown.classList.remove('show');
+    });
+}
+
+// Initialize language system on page load
+initializeLanguageSelector();
+updateUILanguage();
+
+// ──────────────────────────────────────────────────────────────────────────
+
 playerNameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') createRoomBtn.click();
 });
@@ -206,7 +305,9 @@ createRoomBtn.addEventListener('click', () => {
     const name = playerNameInput.value.trim();
     if (!name) { showToast('Enter your name first!', 'error'); return; }
     const mode = gameModeSelect.value;
-    socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false });
+    const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
+    const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
+    socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds });
 });
 
 joinRoomBtn.addEventListener('click', () => {
@@ -221,6 +322,10 @@ quickPlayBtn.addEventListener('click', () => {
     const name = playerNameInput.value.trim();
     if (!name) { showToast('Enter your name first!', 'error'); return; }
     socket.emit('quickPlay', { playerName: name, avatarId: selectedAvatarId });
+});
+
+leaderboardBtn.addEventListener('click', () => {
+    showLeaderboard();
 });
 
 copyCodeBtn.addEventListener('click', () => {
@@ -239,6 +344,13 @@ shareWhatsAppBtn.addEventListener('click', () => {
 
 startGameBtn.addEventListener('click', () => {
     socket.emit('startGame');
+});
+
+// Rounds selector - only host can change
+const roundsSelect = document.getElementById('rounds-select');
+roundsSelect.addEventListener('change', () => {
+    const rounds = parseInt(roundsSelect.value);
+    socket.emit('updateRounds', { rounds });
 });
 
 function updateWaitingRoom(playerArray) {
@@ -558,7 +670,9 @@ chatInput.addEventListener('keydown', (e) => {
 document.getElementById('quick-chat').addEventListener('click', (e) => {
     const btn = e.target.closest('.quick-chat-btn');
     if (!btn || isDrawer || chatInput.disabled) return;
-    const msg = btn.dataset.msg;
+    const msgKey = btn.dataset.msg;
+    // Send translated message
+    const msg = t(msgKey);
     socket.emit('chatMessage', { message: msg });
 });
 
@@ -567,25 +681,35 @@ socket.on('connect', () => { myId = socket.id; });
 socket.on('error', ({ message }) => { showToast(message, 'error'); });
 
 // Room Created
-socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray }) => {
+socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray, totalRounds }) => {
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
+    // Update rounds selector
+    if (totalRounds) {
+        roundsSelect.value = totalRounds;
+    }
     updateWaitingRoom(playerArray);
     showScreen('waiting-screen');
 });
 
 // Room Joined
-socket.on('roomJoined', ({ code, mode, isPublic: pub, players: playerArray }) => {
+socket.on('roomJoined', ({ code, mode, isPublic: pub, players: playerArray, totalRounds }) => {
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
+    // Update rounds selector
+    if (totalRounds) {
+        roundsSelect.value = totalRounds;
+    }
+    // Disable rounds selector for non-host players
+    roundsSelect.disabled = true;
     updateWaitingRoom(playerArray);
     showScreen('waiting-screen');
 });
@@ -604,6 +728,13 @@ socket.on('playerLeft', ({ playerName, players: playerArray }) => {
         updateGamePlayerList(playerArray, null);
     }
     addChatMessage('', `${playerName} left the room`, 'system');
+});
+
+// Rounds Updated
+socket.on('roundsUpdated', ({ totalRounds }) => {
+    if (roundsSelect) {
+        roundsSelect.value = totalRounds;
+    }
 });
 
 // Auto Starting
@@ -853,6 +984,12 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
     `).join('');
 
     gameoverOverlay.classList.remove('hidden');
+
+    // Save player stats to leaderboard
+    const myPlayer = sortedPlayers.find(p => p.id === myId);
+    if (myPlayer && typeof savePlayerStats === 'function') {
+        savePlayerStats(myPlayer.name, myPlayer.score, currentMode);
+    }
 
     if (winner.id === myId) {
         spawnConfetti();

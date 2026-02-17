@@ -1,0 +1,25 @@
+# Chitrakaar - Robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Crawl-delay for better server performance
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://chitrakaar.com/sitemap.xml
+
+# Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0.5
+
+# Bing
+User-agent: Bingbot
+Allow: /
+
+# Baidu
+User-agent: Baiduspider
+Allow: /

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>https://chitrakaar.com/</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <mobile:mobile/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://chitrakaar.com/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="hi" href="https://chitrakaar.com/?lang=hi"/>
+    <xhtml:link rel="alternate" hreflang="te" href="https://chitrakaar.com/?lang=te"/>
+    <xhtml:link rel="alternate" hreflang="mr" href="https://chitrakaar.com/?lang=mr"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://chitrakaar.com/?lang=bn"/>
+    <xhtml:link rel="alternate" hreflang="kn" href="https://chitrakaar.com/?lang=kn"/>
+  </url>
+  
+  <!-- About (future page) -->
+  <url>
+    <loc>https://chitrakaar.com/about</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- How to Play (future page) -->
+  <url>
+    <loc>https://chitrakaar.com/how-to-play</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Privacy Policy (future page) -->
+  <url>
+    <loc>https://chitrakaar.com/privacy</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  
+  <!-- Terms of Service (future page) -->
+  <url>
+    <loc>https://chitrakaar.com/terms</loc>
+    <lastmod>2024-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>

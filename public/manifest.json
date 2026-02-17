@@ -1,0 +1,73 @@
+{
+  "name": "Chitrakaar - Draw & Guess, Desi Style",
+  "short_name": "Chitrakaar",
+  "description": "Free multiplayer Indian draw-and-guess game with Bollywood, Cricket, and Desi words",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#ff6b2b",
+  "orientation": "any",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["games", "entertainment", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create Room",
+      "short_name": "Create",
+      "description": "Create a new game room",
+      "url": "/?action=create",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Quick Play",
+      "short_name": "Quick Play",
+      "description": "Join a random game",
+      "url": "/?action=quickplay",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
