@@ -9,7 +9,7 @@ Disallow: /admin/
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://chitrakaar.com/sitemap.xml
+Sitemap: https://chitrakaar-dct4.onrender.com/sitemap.xml
 
 # Google
 User-agent: Googlebot

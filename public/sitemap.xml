@@ -6,22 +6,22 @@
   
   <!-- Homepage -->
   <url>
-    <loc>https://chitrakaar.com/</loc>
+    <loc>https://chitrakaar-dct4.onrender.com/</loc>
     <lastmod>2026-02-18</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <mobile:mobile/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://chitrakaar.com/?lang=en"/>
-    <xhtml:link rel="alternate" hreflang="hi" href="https://chitrakaar.com/?lang=hi"/>
-    <xhtml:link rel="alternate" hreflang="te" href="https://chitrakaar.com/?lang=te"/>
-    <xhtml:link rel="alternate" hreflang="mr" href="https://chitrakaar.com/?lang=mr"/>
-    <xhtml:link rel="alternate" hreflang="bn" href="https://chitrakaar.com/?lang=bn"/>
-    <xhtml:link rel="alternate" hreflang="kn" href="https://chitrakaar.com/?lang=kn"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://chitrakaar-dct4.onrender.com/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="hi" href="https://chitrakaar-dct4.onrender.com/?lang=hi"/>
+    <xhtml:link rel="alternate" hreflang="te" href="https://chitrakaar-dct4.onrender.com/?lang=te"/>
+    <xhtml:link rel="alternate" hreflang="mr" href="https://chitrakaar-dct4.onrender.com/?lang=mr"/>
+    <xhtml:link rel="alternate" hreflang="bn" href="https://chitrakaar-dct4.onrender.com/?lang=bn"/>
+    <xhtml:link rel="alternate" hreflang="kn" href="https://chitrakaar-dct4.onrender.com/?lang=kn"/>
   </url>
   
   <!-- About (future page) -->
   <url>
-    <loc>https://chitrakaar.com/about</loc>
+    <loc>https://chitrakaar-dct4.onrender.com/about</loc>
     <lastmod>2026-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -29,7 +29,7 @@
   
   <!-- How to Play (future page) -->
   <url>
-    <loc>https://chitrakaar.com/how-to-play</loc>
+    <loc>https://chitrakaar-dct4.onrender.com/how-to-play</loc>
     <lastmod>2026-02-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -37,7 +37,7 @@
   
   <!-- Privacy Policy (future page) -->
   <url>
-    <loc>https://chitrakaar.com/privacy</loc>
+    <loc>https://chitrakaar-dct4.onrender.com/privacy</loc>
     <lastmod>2026-02-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
@@ -45,7 +45,7 @@
   
   <!-- Terms of Service (future page) -->
   <url>
-    <loc>https://chitrakaar.com/terms</loc>
+    <loc>https://chitrakaar-dct4.onrender.com/terms</loc>
     <lastmod>2026-02-18</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

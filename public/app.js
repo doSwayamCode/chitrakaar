@@ -58,7 +58,7 @@ const playerNameInput = document.getElementById('player-name');
 const roomCodeInput = document.getElementById('room-code-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const joinRoomBtn = document.getElementById('join-room-btn');
-const quickPlayBtn = document.getElementById('quick-play-btn');
+// Quick play button removed - const quickPlayBtn = document.getElementById('quick-play-btn');
 const leaderboardBtn = document.getElementById('leaderboard-btn');
 const gameModeSelect = document.getElementById('game-mode');
 
@@ -306,14 +306,12 @@ function enableJoinButtons() {
     isJoining = false;
     createRoomBtn.disabled = false;
     joinRoomBtn.disabled = false;
-    quickPlayBtn.disabled = false;
 }
 
 function disableJoinButtons() {
     isJoining = true;
     createRoomBtn.disabled = true;
     joinRoomBtn.disabled = true;
-    quickPlayBtn.disabled = true;
 }
 
 playerNameInput.addEventListener('keydown', (e) => {
@@ -345,13 +343,7 @@ joinRoomBtn.addEventListener('click', () => {
     socket.emit('joinRoom', { roomCode: code, playerName: name, avatarId: selectedAvatarId });
 });
 
-quickPlayBtn.addEventListener('click', () => {
-    if (isJoining) return;
-    const name = playerNameInput.value.trim();
-    if (!name) { showToast('Enter your name first!', 'error'); return; }
-    disableJoinButtons();
-    socket.emit('quickPlay', { playerName: name, avatarId: selectedAvatarId });
-});
+// Quick play functionality removed
 
 leaderboardBtn.addEventListener('click', () => {
     showLeaderboard();
@@ -1068,6 +1060,9 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
     }
 
     addChatMessage('', `Game Over! ${winner.name} wins with ${winner.score} pts!`, 'system');
+    
+    // Initialize share buttons
+    initGameOverShareButtons();
 });
 
 // Game Ended (not enough players)
@@ -1095,3 +1090,49 @@ socket.on('roomUpdate', ({ players: playerArray, state }) => {
         updateWaitingRoom(playerArray);
     }
 });
+
+// Initialize share buttons in game over screen
+function initGameOverShareButtons() {
+    const instagramBtn = document.getElementById('share-instagram-btn');
+    const whatsappBtn = document.getElementById('share-whatsapp-btn');
+    
+    if (instagramBtn && whatsappBtn) {
+        // Remove any existing listeners
+        const newInstagramBtn = instagramBtn.cloneNode(true);
+        const newWhatsappBtn = whatsappBtn.cloneNode(true);
+        instagramBtn.replaceWith(newInstagramBtn);
+        whatsappBtn.replaceWith(newWhatsappBtn);
+        
+        // Add new listeners
+        newInstagramBtn.addEventListener('click', () => {
+            shareGameResultToInstagram();
+        });
+        
+        newWhatsappBtn.addEventListener('click', () => {
+            shareGameResultToWhatsApp();
+        });
+    }
+}
+
+function shareGameResultToInstagram() {
+    if (!canvas) return;
+    
+    const playerName = playerNameInput?.value || 'Player';
+    const canvasData = canvas.toDataURL('image/png');
+    
+    // Use the existing createStoryTemplate function
+    if (typeof createStoryTemplate === 'function') {
+        createStoryTemplate(canvasData, playerName, '');
+    } else {
+        showToast('Share feature unavailable', 'error');
+    }
+}
+
+function shareGameResultToWhatsApp() {
+    const url = window.location.origin;
+    const message = `I just played Chitrakaar! 🎨🎮\n\nPlay the Indian draw & guess game with me!\n\n${url}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    
+    window.open(whatsappUrl, '_blank');
+    showToast('Opening WhatsApp...', 'success');
+}

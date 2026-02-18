@@ -76,7 +76,7 @@ function createStoryTemplate(canvasData, playerName, word) {
         // Call to action
         storyCtx.font = '36px Inter, sans-serif';
         storyCtx.fillStyle = '#9999bb';
-        storyCtx.fillText('Play now at chitrakaar.com', 540, 1560);
+        storyCtx.fillText('Play now at chitrakaar-dct4.onrender.com', 540, 1560);
         
         // QR Code placeholder (you can integrate a QR code library)
         storyCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';

@@ -1144,28 +1144,28 @@ body {
 /* Laptop screens (1024-1366) - maximize canvas space */
 @media (min-width: 1024px) and (max-width: 1366px) {
   .game-layout {
-    grid-template-columns: 220px 1fr 300px !important;
+    grid-template-columns: 250px 1fr 340px !important;
   }
 }
 
 /* Standard laptops and small desktops (1367-1599) */
 @media (min-width: 1367px) and (max-width: 1599px) {
   .game-layout {
-    grid-template-columns: 260px 1fr 360px !important;
+    grid-template-columns: 270px 1fr 370px !important;
   }
 }
 
 /* Large desktops (1600-1919) */
 @media (min-width: 1600px) and (max-width: 1919px) {
   .game-layout {
-    grid-template-columns: 280px 1fr 400px !important;
+    grid-template-columns: 290px 1fr 410px !important;
   }
 }
 
 /* Extra large desktops (1920+) */
 @media (min-width: 1920px) {
   .game-layout {
-    grid-template-columns: 300px 1fr 420px !important;
+    grid-template-columns: 310px 1fr 440px !important;
   }
 }
 
@@ -1633,6 +1633,68 @@ body {
   color: var(--text-muted);
   font-size: 0.8rem;
   margin-top: 14px;
+}
+
+/* Game Over Share Section */
+.gameover-share {
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(255, 107, 43, 0.08);
+  border-radius: 14px;
+  border: 2px solid rgba(255, 107, 43, 0.2);
+}
+
+.share-prompt {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.share-btns-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-share-insta,
+.btn-share-wa {
+  padding: 12px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  min-height: 48px;
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.btn-share-insta {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  color: white;
+  border: none;
+}
+
+.btn-share-insta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(225, 48, 108, 0.4);
+}
+
+.btn-share-wa {
+  background: var(--accent-whatsapp);
+  color: white;
+  border: none;
+}
+
+.btn-share-wa:hover {
+  background: #22c55e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
 }
 
 /* ─── Tools Bar - Mobile-First Design ─────────────────────────────────── */
@@ -3063,5 +3125,29 @@ body {
 
   .share-icon {
     font-size: 1.6rem;
+  }
+}
+
+/* Mobile responsive for game over share section */
+@media (max-width: 600px) {
+  .gameover-share {
+    padding: 16px 14px;
+    margin: 16px 0;
+  }
+
+  .share-prompt {
+    font-size: 0.9rem;
+  }
+
+  .share-btns-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-share-insta,
+  .btn-share-wa {
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
   }
 }
