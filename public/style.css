@@ -1133,7 +1133,7 @@ body {
 
 .game-layout {
   display: grid;
-  grid-template-columns: 140px 1fr 180px;
+  grid-template-columns: 250px 1fr 340px;
   height: 100%;
   gap: 0;
   width: 100%;
@@ -1144,28 +1144,28 @@ body {
 /* Laptop screens (1024-1366) - maximize canvas space */
 @media (min-width: 1024px) and (max-width: 1366px) {
   .game-layout {
-    grid-template-columns: 130px 1fr 160px !important;
+    grid-template-columns: 220px 1fr 300px !important;
   }
 }
 
 /* Standard laptops and small desktops (1367-1599) */
 @media (min-width: 1367px) and (max-width: 1599px) {
   .game-layout {
-    grid-template-columns: 145px 1fr 175px !important;
+    grid-template-columns: 260px 1fr 360px !important;
   }
 }
 
 /* Large desktops (1600-1919) */
 @media (min-width: 1600px) and (max-width: 1919px) {
   .game-layout {
-    grid-template-columns: 160px 1fr 190px !important;
+    grid-template-columns: 280px 1fr 400px !important;
   }
 }
 
 /* Extra large desktops (1920+) */
 @media (min-width: 1920px) {
   .game-layout {
-    grid-template-columns: 180px 1fr 210px !important;
+    grid-template-columns: 300px 1fr 420px !important;
   }
 }
 
@@ -1878,6 +1878,26 @@ body {
   /* Prevents iOS zoom */
   outline: none;
   min-width: 0;
+}
+
+/* Wider and more spacious chat input on desktop/laptop screens */
+@media (min-width: 1024px) {
+  .chat-input-area {
+    padding: 14px 18px;
+    gap: 12px;
+  }
+  
+  .chat-input-area input {
+    padding: 16px 20px;
+    font-size: 16px;
+    border-radius: 12px;
+  }
+  
+  .chat-input-area .btn-small {
+    padding: 16px 24px;
+    min-width: 80px;
+    font-size: 0.95rem;
+  }
 }
 
 /* ─── Mobile Toggles ───────────────────────────────────────────────────── */

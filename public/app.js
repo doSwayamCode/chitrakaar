@@ -147,6 +147,21 @@ function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
     
+    // Show/hide language selector - only visible on lobby screen
+    const languageSelector = document.querySelector('.language-selector');
+    if (languageSelector) {
+        if (screenId === 'lobby-screen') {
+            languageSelector.style.display = 'block';
+        } else {
+            languageSelector.style.display = 'none';
+        }
+    }
+    
+    // Re-enable join buttons when returning to lobby
+    if (screenId === 'lobby-screen') {
+        enableJoinButtons();
+    }
+    
     // Resize canvas when showing game screen
     if (screenId === 'game-screen') {
         // Use multiple resize calls with delays to ensure proper sizing
@@ -284,34 +299,57 @@ updateUILanguage();
 
 // ──────────────────────────────────────────────────────────────────────────
 
+// Flag to prevent multiple join attempts
+let isJoining = false;
+
+function enableJoinButtons() {
+    isJoining = false;
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
+    quickPlayBtn.disabled = false;
+}
+
+function disableJoinButtons() {
+    isJoining = true;
+    createRoomBtn.disabled = true;
+    joinRoomBtn.disabled = true;
+    quickPlayBtn.disabled = true;
+}
+
 playerNameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') createRoomBtn.click();
+    if (e.key === 'Enter' && !isJoining) createRoomBtn.click();
 });
 
 roomCodeInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') joinRoomBtn.click();
+    if (e.key === 'Enter' && !isJoining) joinRoomBtn.click();
 });
 
 createRoomBtn.addEventListener('click', () => {
+    if (isJoining) return;
     const name = playerNameInput.value.trim();
     if (!name) { showToast('Enter your name first!', 'error'); return; }
     const mode = gameModeSelect.value;
     const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
     const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
+    disableJoinButtons();
     socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds });
 });
 
 joinRoomBtn.addEventListener('click', () => {
+    if (isJoining) return;
     const name = playerNameInput.value.trim();
     const code = roomCodeInput.value.trim().toUpperCase();
     if (!name) { showToast('Enter your name first!', 'error'); return; }
     if (!code) { showToast('Enter a room code!', 'error'); return; }
+    disableJoinButtons();
     socket.emit('joinRoom', { roomCode: code, playerName: name, avatarId: selectedAvatarId });
 });
 
 quickPlayBtn.addEventListener('click', () => {
+    if (isJoining) return;
     const name = playerNameInput.value.trim();
     if (!name) { showToast('Enter your name first!', 'error'); return; }
+    disableJoinButtons();
     socket.emit('quickPlay', { playerName: name, avatarId: selectedAvatarId });
 });
 
@@ -669,7 +707,10 @@ document.getElementById('quick-chat').addEventListener('click', (e) => {
 
 socket.on('connect', () => { myId = socket.id; });
 
-socket.on('error', ({ message }) => { showToast(message, 'error'); });
+socket.on('error', ({ message }) => { 
+    showToast(message, 'error'); 
+    enableJoinButtons();
+});
 
 // Room Created
 socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray, totalRounds }) => {
