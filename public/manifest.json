@@ -12,36 +12,10 @@
   "categories": ["games", "entertainment", "social"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/logo-512.png",
+      "src": "/chitrakaar-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshot-desktop.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide"
     }
   ],
   "shortcuts": [
@@ -50,14 +24,14 @@
       "short_name": "Create",
       "description": "Create a new game room",
       "url": "/?action=create",
-      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/chitrakaar-logo.png", "sizes": "512x512" }]
     },
     {
       "name": "Quick Play",
       "short_name": "Quick Play",
       "description": "Join a random game",
       "url": "/?action=quickplay",
-      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/chitrakaar-logo.png", "sizes": "512x512" }]
     }
   ],
   "share_target": {

@@ -1,13 +1,7 @@
 // ─── PWA Service Worker Registration ─────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('ServiceWorker registered:', registration.scope);
-            })
-            .catch(error => {
-                console.log('ServiceWorker registration failed:', error);
-            });
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
 }
 
@@ -19,39 +13,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     // Stash the event so it can be triggered later
     deferredPrompt = e;
-    // Show install button (we can add this later to UI)
-    console.log('PWA install prompt available');
 });
 
 window.addEventListener('appinstalled', () => {
-    console.log('PWA installed successfully');
     deferredPrompt = null;
 });
-
-// ─── Prevent Pull-to-Refresh on Mobile ────────────────────────────────────
-// Prevent the default pull-to-refresh behavior that can interrupt gameplay
-let touchStartY = 0;
-
-document.addEventListener('touchstart', (e) => {
-    touchStartY = e.touches[0].clientY;
-}, { passive: false });
-
-document.addEventListener('touchmove', (e) => {
-    const touchY = e.touches[0].clientY;
-    const touchDiff = touchY - touchStartY;
-    
-    // If user is at the top of the page and trying to scroll down (pull-to-refresh)
-    if (touchDiff > 0 && window.scrollY === 0) {
-        e.preventDefault();
-    }
-}, { passive: false });
-
-// Prevent overscroll/bounce effect on iOS
-document.addEventListener('touchmove', (e) => {
-    if (e.scale !== 1) {
-        e.preventDefault();
-    }
-}, { passive: false });
 
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -505,8 +471,6 @@ function resizeCanvas() {
         };
         img.src = canvasData;
     }
-    
-    console.log(`Canvas resized to ${canvas.width}x${canvas.height} (container: ${rect.width}x${rect.height})`);
 }
 
 let resizeTimeout;

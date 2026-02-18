@@ -4,19 +4,19 @@ const ASSETS_TO_CACHE = [
   '/index.html',
   '/style.css',
   '/app.js',
+  '/translations.js',
+  '/leaderboard.js',
+  '/share.js',
   '/manifest.json',
-  '/logo-192.png',
-  '/logo-512.png',
+  '/chitrakaar-logo.png',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
 ];
 
 // Install event - cache assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching app shell');
         return cache.addAll(ASSETS_TO_CACHE);
       })
       .then(() => self.skipWaiting())
@@ -25,13 +25,11 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clear old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -74,7 +72,6 @@ self.addEventListener('fetch', (event) => {
 
 // Background sync for sharing
 self.addEventListener('sync', (event) => {
-  console.log('[SW] Background sync:', event.tag);
   if (event.tag === 'share-drawing') {
     event.waitUntil(
       // Handle background sharing logic
