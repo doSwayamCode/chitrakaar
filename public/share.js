@@ -78,12 +78,23 @@ function createStoryTemplate(canvasData, playerName, word) {
         storyCtx.fillStyle = '#9999bb';
         storyCtx.fillText('Play now at chitrakaar-dct4.onrender.com', 540, 1560);
         
-        // QR Code placeholder (you can integrate a QR code library)
-        storyCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        storyCtx.fillRect(440, 1620, 200, 200);
-        storyCtx.fillStyle = '#666688';
-        storyCtx.font = '24px Inter, sans-serif';
-        storyCtx.fillText('SCAN TO PLAY', 540, 1735);
+        // Load and draw QR Code image
+        const qrImg = new Image();
+        qrImg.crossOrigin = 'anonymous';
+        qrImg.onload = () => {
+            // Draw QR code image
+            storyCtx.drawImage(qrImg, 440, 1620, 200, 200);
+        };
+        qrImg.onerror = () => {
+            // Fallback if QR code image doesn't load
+            storyCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            storyCtx.fillRect(440, 1620, 200, 200);
+            storyCtx.fillStyle = '#666688';
+            storyCtx.font = '24px Inter, sans-serif';
+            storyCtx.fillText('SCAN TO PLAY', 540, 1735);
+        };
+        // Set QR code image source - UPDATE THIS PATH WITH YOUR QR CODE IMAGE
+        qrImg.src = '/qr-code.png';  // Place your QR code image as 'qr-code.png' in the public folder
         
         // Show share modal with the generated image
         showShareModal(storyCanvas);
@@ -224,8 +235,14 @@ function initializeShareFeature() {
         shareBtn.id = 'share-drawing-btn';
         shareBtn.className = 'tool-btn tool-btn-share';
         shareBtn.title = 'Share to Instagram';
-        shareBtn.textContent = 'Share';
+        shareBtn.innerHTML = '📷 Share';
+        shareBtn.style.cssText = 'display: flex !important; align-items: center !important; gap: 4px !important;';
         shareBtn.addEventListener('click', shareCurrentDrawing);
+        // Use touchend for better mobile support
+        shareBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            shareCurrentDrawing();
+        });
         saveBtn.parentNode.insertBefore(shareBtn, saveBtn.nextSibling);
     }
 }
@@ -239,11 +256,26 @@ function shareCurrentDrawing() {
     createStoryTemplate(canvas.toDataURL('image/png'), playerName, currentWord);
 }
 
-// Initialize when game starts
+// Initialize when game starts and on new turns
 if (typeof socket !== 'undefined') {
     socket.on('gameStarted', () => {
-        setTimeout(initializeShareFeature, 1000);
+        setTimeout(initializeShareFeature, 500);
     });
+    socket.on('newTurn', () => {
+        setTimeout(initializeShareFeature, 500);
+    });
+    socket.on('turnStarted', () => {
+        setTimeout(initializeShareFeature, 500);
+    });
+}
+
+// Also initialize when DOM is ready (fallback)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(initializeShareFeature, 2000);
+    });
+} else {
+    setTimeout(initializeShareFeature, 2000);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
