@@ -28,6 +28,7 @@
 ## Testing the QR Code
 
 After placing the image:
+
 1. Restart your server
 2. Start a game and draw something
 3. Click the "Share" button
@@ -36,12 +37,14 @@ After placing the image:
 ## QR Code Recommendations
 
 ✅ **DO:**
+
 - Use high contrast (black on white or vice versa)
 - Keep it at least 400x400 pixels
 - Test it with multiple QR scanners
 - Use PNG format with transparent/white background
 
 ❌ **DON'T:**
+
 - Make it too small (blurry in stories)
 - Use low contrast colors
 - Add too much design (might not scan properly)

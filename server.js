@@ -1,9 +1,15 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const compression = require('compression');
 const { getRandomWords } = require('./words');
+const { connect: connectDB, getDb, hashPin, checkBadges, updateStreak, sanitizeProfile, saveDrawing, getGallery, saveGuestScore, getMergedLeaderboard, BADGES } = require('./db');
+
+// Connect to MongoDB on startup (gracefully disabled if MONGO_URI not set)
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -354,6 +360,15 @@ function endTurn(room, allGuessed) {
 
     if (room.guessedPlayers.length > 0 && drawer) {
         drawer.score += Math.round(room.guessedPlayers.length * 50);
+    }
+
+    // Save the drawing to the gallery (fire-and-forget, never blocks the game)
+    if (room.currentWord && room.drawHistory.length >= 10 && drawer) {
+        saveDrawing({
+            word:       room.currentWord,
+            drawerName: drawer.name,
+            strokes:    room.drawHistory.slice(),
+        });
     }
 
     io.to(room.code).emit('turnEnd', {
@@ -857,6 +872,220 @@ app.get('/api/avatars', (req, res) => {
 
 app.get('/api/modes', (req, res) => {
     res.json(GAME_MODES);
+});
+
+// ─── Profile Rate Limiter (in-memory, per IP) ─────────────────────────────
+const profileRateLimits = new Map();
+
+function profileRateLimit(ip, max = 10, windowMs = 60000) {
+    const now = Date.now();
+    if (!profileRateLimits.has(ip)) profileRateLimits.set(ip, []);
+    const times = profileRateLimits.get(ip).filter(t => now - t < windowMs);
+    if (times.length >= max) return false;
+    times.push(now);
+    profileRateLimits.set(ip, times);
+    return true;
+}
+
+// Clean up old rate limit entries every 5 minutes
+setInterval(() => {
+    const cutoff = Date.now() - 60000;
+    for (const [ip, times] of profileRateLimits) {
+        const fresh = times.filter(t => t > cutoff);
+        if (fresh.length === 0) profileRateLimits.delete(ip);
+        else profileRateLimits.set(ip, fresh);
+    }
+}, 5 * 60 * 1000);
+
+// ─── GET /api/badges ─────────────────────────────────────────────────────
+// Returns all badge definitions so the frontend can render them.
+app.get('/api/badges', (req, res) => {
+    res.json(Object.values(BADGES));
+});
+
+// ─── POST /api/profile/register ──────────────────────────────────────────
+app.post('/api/profile/register', async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress;
+    if (!profileRateLimit(ip, 5)) {
+        return res.status(429).json({ error: 'Too many attempts. Please wait a minute.' });
+    }
+
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Profile service is unavailable. Try again later.' });
+
+    const { username, displayName, pin } = req.body || {};
+    if (!username || !displayName || !pin) {
+        return res.status(400).json({ error: 'Username, display name, and PIN are required.' });
+    }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        return res.status(400).json({ error: 'Username: 3–20 characters, letters/numbers/underscores only.' });
+    }
+    if (!/^\d{4}$/.test(String(pin))) {
+        return res.status(400).json({ error: 'PIN must be exactly 4 digits.' });
+    }
+    const cleanName = String(displayName).trim().substring(0, 20);
+    if (cleanName.length < 1) {
+        return res.status(400).json({ error: 'Display name cannot be empty.' });
+    }
+
+    const profile = {
+        username: username.toLowerCase(),
+        displayName: cleanName,
+        pinHash: hashPin(String(pin)),
+        createdAt: new Date(),
+        stats: {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            totalScore: 0,
+            bestScore: 0,
+        },
+        streak: {
+            current: 0,
+            longest: 0,
+            lastPlayedDate: null,
+        },
+        badges: [],
+        favouriteMode: 'classic',
+        lastPlayedAt: null,
+    };
+
+    try {
+        await db.collection('players').insertOne(profile);
+        return res.json({ success: true, profile: sanitizeProfile(profile) });
+    } catch (err) {
+        if (err.code === 11000) {
+            return res.status(409).json({ error: 'That username is already taken. Try another.' });
+        }
+        console.error('[Profile] Register error:', err.message);
+        return res.status(500).json({ error: 'Could not create profile. Try again.' });
+    }
+});
+
+// ─── POST /api/profile/login ──────────────────────────────────────────────
+app.post('/api/profile/login', async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress;
+    if (!profileRateLimit(ip, 10)) {
+        return res.status(429).json({ error: 'Too many attempts. Please wait a minute.' });
+    }
+
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Profile service is unavailable. Try again later.' });
+
+    const { username, pin } = req.body || {};
+    if (!username || !pin) {
+        return res.status(400).json({ error: 'Username and PIN are required.' });
+    }
+
+    const player = await db.collection('players').findOne({ username: username.toLowerCase() });
+    if (!player) return res.status(404).json({ error: 'Profile not found.' });
+    if (player.pinHash !== hashPin(String(pin))) {
+        return res.status(401).json({ error: 'Wrong PIN. Try again.' });
+    }
+
+    return res.json({ success: true, profile: sanitizeProfile(player) });
+});
+
+// ─── POST /api/profile/save-game ─────────────────────────────────────────
+// Called from the client after every game. Updates stats, streak, badges.
+app.post('/api/profile/save-game', async (req, res) => {
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Profile service is unavailable.' });
+
+    const { username, pin, score, won, mode } = req.body || {};
+    if (!username || !pin || typeof score !== 'number' || typeof won !== 'boolean') {
+        return res.status(400).json({ error: 'Invalid data.' });
+    }
+    if (score < 0 || score > 5000) {
+        return res.status(400).json({ error: 'Invalid score.' });
+    }
+
+    const player = await db.collection('players').findOne({ username: username.toLowerCase() });
+    if (!player) return res.status(404).json({ error: 'Profile not found.' });
+    if (player.pinHash !== hashPin(String(pin))) {
+        return res.status(401).json({ error: 'Unauthorized.' });
+    }
+
+    // Calculate new streak
+    const newStreak = updateStreak(player);
+
+    // Calculate new stats
+    const newStats = {
+        gamesPlayed: player.stats.gamesPlayed + 1,
+        gamesWon:    player.stats.gamesWon + (won ? 1 : 0),
+        totalScore:  player.stats.totalScore + score,
+        bestScore:   Math.max(player.stats.bestScore, score),
+    };
+
+    // Check badges with updated stats + streak
+    const tempProfile = { ...player, stats: newStats, streak: newStreak };
+    const { updatedBadges, newBadges } = checkBadges(tempProfile, { score, won, mode });
+
+    await db.collection('players').updateOne(
+        { username: username.toLowerCase() },
+        {
+            $set: {
+                stats: newStats,
+                streak: newStreak,
+                badges: updatedBadges,
+                favouriteMode: mode || player.favouriteMode,
+                lastPlayedAt: new Date(),
+            },
+        }
+    );
+
+    return res.json({ success: true, newBadges, streak: newStreak, stats: newStats });
+});
+
+// ─── GET /api/profile/:username ───────────────────────────────────────────
+app.get('/api/profile/:username', async (req, res) => {
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Profile service is unavailable.' });
+
+    const player = await db.collection('players').findOne(
+        { username: req.params.username.toLowerCase() },
+        { projection: { pinHash: 0, _id: 0 } }
+    );
+    if (!player) return res.status(404).json({ error: 'Profile not found.' });
+    return res.json(player);
+});
+
+// ─── GET /api/gallery ────────────────────────────────────────────────────────
+app.get('/api/gallery', async (req, res) => {
+    try {
+        const drawings = await getGallery(24);
+        return res.json(drawings);
+    } catch (err) {
+        console.error('[Gallery] Fetch error:', err.message);
+        return res.status(500).json({ error: 'Could not load gallery.' });
+    }
+});
+
+// ─── POST /api/leaderboard/guest-score ──────────────────────────────────────────────
+// Called after game over when player is not logged in.
+app.post('/api/leaderboard/guest-score', async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress;
+    if (!profileRateLimit(ip, 10)) {
+        return res.status(429).json({ error: 'Too many requests.' });
+    }
+    const { score, mode } = req.body || {};
+    if (typeof score !== 'number' || score < 0 || score > 9999) {
+        return res.status(400).json({ error: 'Invalid score.' });
+    }
+    const guestNum = await saveGuestScore(score, mode);
+    if (!guestNum) return res.status(503).json({ error: 'Could not save score.' });
+    return res.json({ success: true, guestName: `Guest-${guestNum}`, guestNum });
+});
+
+// ─── GET /api/leaderboard/alltime ────────────────────────────────────────
+app.get('/api/leaderboard/alltime', async (req, res) => {
+    const db = getDb();
+    if (!db) return res.status(503).json({ error: 'Profile service is unavailable.' });
+    try {
+        const top = await getMergedLeaderboard(20);
+        return res.json(top);
+    } catch (err) {
+        return res.status(500).json({ error: 'Could not load leaderboard.' });
+    }
 });
 
 const PORT = process.env.PORT || 3000;

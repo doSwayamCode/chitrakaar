@@ -36,12 +36,18 @@ function hideLoadingScreen() {
 socket.on('connect', () => {
     myId = socket.id;
     if (loadingStatus) loadingStatus.textContent = 'Connected!';
-    setTimeout(hideLoadingScreen, 400); // Short delay so user sees "Connected!"
-});
-
-socket.on('disconnect', () => {
-    // If we get disconnected mid-game, the loading screen is already gone
-    // Socket.IO will auto-reconnect
+    setTimeout(() => {
+        hideLoadingScreen();
+        // Auto-fill room code if URL contains ?room=XXXXXX
+        const params = new URLSearchParams(window.location.search);
+        const codeFromUrl = params.get('room');
+        if (codeFromUrl) {
+            const code = codeFromUrl.toUpperCase().trim();
+            roomCodeInput.value = code;
+            // Show a subtle banner prompting them to enter their name & join
+            showJoinBanner(code);
+        }
+    }, 400);
 });
 
 socket.io.on('reconnect_attempt', (attempt) => {
@@ -143,6 +149,21 @@ const MODE_LABELS = {
     speed: 'Speed'
 };
 
+function getRoomLink(code) {
+    const base = window.location.origin + window.location.pathname;
+    return `${base}?room=${code}`;
+}
+
+function pushRoomUrl(code) {
+    if (code) {
+        history.pushState({ room: code }, '', `?room=${code}`);
+    }
+}
+
+function clearRoomUrl() {
+    history.replaceState({}, '', window.location.pathname);
+}
+
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
@@ -160,6 +181,7 @@ function showScreen(screenId) {
     // Re-enable join buttons when returning to lobby
     if (screenId === 'lobby-screen') {
         enableJoinButtons();
+        clearRoomUrl(); // remove ?room= from URL when back at lobby
     }
     
     // Resize canvas when showing game screen
@@ -183,6 +205,23 @@ function showToast(msg, type = 'info') {
     toast.textContent = msg;
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
+}
+
+function showJoinBanner(code) {
+    // Remove any existing banner
+    document.getElementById('join-banner')?.remove();
+    const banner = document.createElement('div');
+    banner.id = 'join-banner';
+    banner.className = 'join-banner';
+    banner.innerHTML = `
+        <span class="join-banner-text">🎨 You've been invited to room <strong>${code}</strong></span>
+        <span class="join-banner-hint">Enter your name above and press <strong>Join</strong></span>
+    `;
+    // Insert it just above the join section
+    const joinSection = document.querySelector('.join-section');
+    if (joinSection) joinSection.parentNode.insertBefore(banner, joinSection);
+    // Focus name input if empty
+    if (!playerNameInput.value) playerNameInput.focus();
 }
 
 function addChatMessage(sender, message, type = 'normal') {
@@ -350,15 +389,16 @@ leaderboardBtn.addEventListener('click', () => {
 });
 
 copyCodeBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(roomCode).then(() => {
+    const link = getRoomLink(roomCode);
+    navigator.clipboard.writeText(link).then(() => {
         copyCodeBtn.textContent = 'Copied!';
-        setTimeout(() => copyCodeBtn.textContent = 'Copy', 1500);
+        setTimeout(() => copyCodeBtn.textContent = 'Copy Link', 1500);
     });
 });
 
 shareWhatsAppBtn.addEventListener('click', () => {
-    const url = window.location.href.split('?')[0];
-    const msg = `Join my Chitrakaar game!\nRoom Code: ${roomCode}\nMode: ${MODE_LABELS[currentMode] || 'Classic'}\n\nPlay here: ${url}`;
+    const link = getRoomLink(roomCode);
+    const msg = `Join my Chitrakaar game! 🎨\nMode: ${MODE_LABELS[currentMode] || 'Classic'}\n\n👉 Click to join instantly:\n${link}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(whatsappUrl, '_blank');
 });
@@ -697,10 +737,20 @@ document.getElementById('quick-chat').addEventListener('click', (e) => {
     socket.emit('chatMessage', { message: msg });
 });
 
-socket.on('connect', () => { myId = socket.id; });
+// (Duplicate removed — see first socket.on('connect') above)
 
-socket.on('error', ({ message }) => { 
-    showToast(message, 'error'); 
+socket.on('error', ({ message }) => {
+    // If the user was trying to join via an invite link and the room is gone, give a
+    // more helpful message instead of the generic "Room not found" one.
+    const isFromLink = !!new URLSearchParams(window.location.search).get('room');
+    if (isFromLink && message.toLowerCase().includes('room not found')) {
+        showToast('This room has expired or no longer exists. Ask your friend to create a new room!', 'error');
+        clearRoomUrl();
+        roomCodeInput.value = '';
+        document.getElementById('join-banner')?.remove();
+    } else {
+        showToast(message, 'error');
+    }
     enableJoinButtons();
 });
 
@@ -712,6 +762,7 @@ socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray, tot
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
+    pushRoomUrl(code); // update browser URL to ?room=CODE
     
     // Track room creation
     if (typeof window.trackEvent === 'function') {
@@ -734,6 +785,7 @@ socket.on('roomJoined', ({ code, mode, isPublic: pub, players: playerArray, tota
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
+    pushRoomUrl(code); // update browser URL to ?room=CODE
     
     // Track room joining
     if (typeof window.trackEvent === 'function') {
@@ -1037,10 +1089,15 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
 
     gameoverOverlay.classList.remove('hidden');
 
-    // Save player stats to leaderboard
+    // Save player stats to local leaderboard
     const myPlayer = sortedPlayers.find(p => p.id === myId);
     if (myPlayer && typeof savePlayerStats === 'function') {
         savePlayerStats(myPlayer.name, myPlayer.score, currentMode);
+    }
+
+    // Submit to persistent profile system (profile.js) — no-op if not logged in
+    if (myPlayer && typeof window.submitGameResult === 'function') {
+        window.submitGameResult(myPlayer.score, winner.id === myId, currentMode);
     }
     
     // Track game completion
