@@ -1036,6 +1036,25 @@ app.post('/api/profile/save-game', async (req, res) => {
     return res.json({ success: true, newBadges, streak: newStreak, stats: newStats });
 });
 
+// ─── GET /api/profile/find-by-name?displayName=xxx ─────────────────────────
+app.get('/api/profile/find-by-name', async (req, res) => {
+    const db = getDb();
+    if (!db) return res.json({ found: false });
+    const name = String(req.query.displayName || '').trim();
+    if (!name || name.length < 2) return res.json({ found: false });
+    try {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const player = await db.collection('players').findOne(
+            { displayName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { projection: { username: 1, displayName: 1, _id: 0 } }
+        );
+        if (player) return res.json({ found: true, username: player.username, displayName: player.displayName });
+        return res.json({ found: false });
+    } catch (_) {
+        return res.json({ found: false });
+    }
+});
+
 // ─── GET /api/profile/:username ───────────────────────────────────────────
 app.get('/api/profile/:username', async (req, res) => {
     const db = getDb();
@@ -1085,6 +1104,27 @@ app.get('/api/leaderboard/alltime', async (req, res) => {
         return res.json(top);
     } catch (err) {
         return res.status(500).json({ error: 'Could not load leaderboard.' });
+    }
+});
+
+// ─── GET /api/profile/find-by-name?displayName=xxx ────────────────────────
+// Checks whether a profile with the given display name exists (case-insensitive).
+// Used by the client to show a "Is this you?" prompt before joining a game.
+app.get('/api/profile/find-by-name', async (req, res) => {
+    const db = getDb();
+    if (!db) return res.json({ found: false });
+    const name = String(req.query.displayName || '').trim();
+    if (!name || name.length < 2) return res.json({ found: false });
+    try {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const player = await db.collection('players').findOne(
+            { displayName: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+            { projection: { username: 1, displayName: 1, _id: 0 } }
+        );
+        if (player) return res.json({ found: true, username: player.username, displayName: player.displayName });
+        return res.json({ found: false });
+    } catch (err) {
+        return res.json({ found: false });
     }
 });
 

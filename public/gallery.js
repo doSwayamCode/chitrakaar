@@ -35,13 +35,12 @@
         const W = canvas.width;
         const H = canvas.height;
 
-        // Background — match in-game canvas background
-        ctx.fillStyle = '#1a1a2e';
+        // White background — matches the real in-game drawing canvas
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, W, H);
 
         if (!strokes || strokes.length === 0) return;
 
-        // Group consecutive same-color/size lines into paths for performance
         let prevColor = null, prevSize = null;
 
         strokes.forEach(s => {
@@ -61,11 +60,10 @@
                 ctx.moveTo(s.x1 * W, s.y1 * H);
                 ctx.lineTo(s.x2 * W, s.y2 * H);
             } else if (s.type === 'fill') {
-                // Flood fill is complex to replay — render as a color swatch dot
                 if (prevColor !== null) { ctx.stroke(); prevColor = null; }
                 ctx.save();
                 ctx.fillStyle = s.color;
-                ctx.fillRect(0, 0, W, H); // simplify: just paint bg for fills
+                ctx.fillRect(0, 0, W, H);
                 ctx.restore();
             }
         });
@@ -152,12 +150,12 @@
             const canvas = document.createElement('canvas');
             canvas.className = 'gallery-canvas';
 
-            // Preview canvas: 240×150 logical pixels
+            // Buffer: 8:5 ratio at 2x for sharpness. CSS controls display size.
             const DPR = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width  = 240 * DPR;
-            canvas.height = 150 * DPR;
+            canvas.width  = 400 * DPR;
+            canvas.height = 250 * DPR;
             canvas.style.width  = '100%';
-            canvas.style.height = '100%';
+            // Do NOT set canvas.style.height — CSS aspect-ratio handles it
             canvas.getContext('2d').scale(DPR, DPR);
 
             card.appendChild(canvas);

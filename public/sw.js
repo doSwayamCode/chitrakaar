@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chitrakaar-v1.0.0';
+const CACHE_NAME = 'chitrakaar-v1.0.4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -38,36 +38,47 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network-first for app files, cache-first for static assets
 self.addEventListener('fetch', (event) => {
-  // Skip socket.io requests
-  if (event.request.url.includes('socket.io')) {
+  // Skip socket.io and non-GET requests
+  if (event.request.url.includes('socket.io') || event.request.method !== 'GET') {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
+  const url = new URL(event.request.url);
+  const isStaticAsset = /\.(png|jpg|jpeg|gif|webp|ico|woff2?|ttf)$/i.test(url.pathname)
+    || event.request.url.includes('fonts.googleapis.com')
+    || event.request.url.includes('fonts.gstatic.com');
+
+  if (isStaticAsset) {
+    // Cache-first for fonts and images (they rarely change)
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
         return fetch(event.request).then((response) => {
-          // Cache successful responses
-          if (!response || response.status !== 200 || response.type === 'opaque') {
-            return response;
-          }
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          if (!response || response.status !== 200 || response.type === 'opaque') return response;
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           return response;
         });
       })
-      .catch(() => {
-        // Return offline page if available
-        return caches.match('/');
-      })
-  );
+    );
+  } else {
+    // Network-first for HTML, JS, CSS — always get fresh updates
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (!response || response.status !== 200) return response;
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => {
+          // Offline fallback: serve from cache
+          return caches.match(event.request).then((cached) => cached || caches.match('/'));
+        })
+    );
+  }
 });
 
 // Background sync for sharing

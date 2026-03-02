@@ -2708,6 +2708,14 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.leaderboard-modal.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .leaderboard-overlay {
@@ -3873,7 +3881,8 @@ body {
 }
 
 .gallery-modal-body {
-  padding: 20px 20px 24px;
+  padding: 16px 20px 24px;
+  background: #f4f1eb;
 }
 
 /* ─── Gallery Grid ───────────────────────────────────────────────────────── */
@@ -3881,24 +3890,32 @@ body {
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 18px;
+  padding: 4px 2px;
 }
 
 .gallery-card {
-  background: var(--bg-glass);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 3px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
 }
 
+/* Subtle variation so cards feel hand-pinned, not grid-stamped */
+.gallery-card:nth-child(3n+1) { transform: rotate(-0.4deg); }
+.gallery-card:nth-child(3n+2) { transform: rotate(0.3deg); }
+.gallery-card:nth-child(3n)   { transform: rotate(-0.2deg); }
+
 .gallery-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent-gold);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transform: rotate(0deg) translateY(-4px) scale(1.02);
+  box-shadow: 4px 8px 24px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.1);
+  z-index: 2;
+  position: relative;
 }
 
 .gallery-card:active {
@@ -3909,29 +3926,32 @@ body {
   display: block;
   width: 100%;
   aspect-ratio: 8 / 5;
-  background: #1a1a2e;
+  background: #ffffff;
 }
 
 .gallery-card-info {
-  padding: 8px 10px 10px;
+  padding: 8px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.06);
 }
 
 .gallery-word {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #1a1a2e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: capitalize;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
 }
 
 .gallery-meta {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+  font-size: 0.68rem;
+  color: #888;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3968,11 +3988,11 @@ body {
 .gallery-lb-box {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
-  border-radius: 18px;
+  border-radius: 6px;
   overflow: hidden;
   width: 100%;
   max-width: 680px;
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.9);
+  box-shadow: 4px 8px 40px rgba(0, 0, 0, 0.9);
   animation: modalSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -4084,4 +4104,77 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
+}
+
+/* ─── Name Profile Notice (shown below name input when a matching profile exists) ─── */
+
+.name-profile-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(0, 201, 123, 0.1), rgba(0, 201, 123, 0.05));
+  border: 1.5px solid rgba(0, 201, 123, 0.3);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  animation: bannerIn 0.25s ease;
+}
+
+.notice-text {
+  flex: 1;
+  min-width: 160px;
+  line-height: 1.4;
+}
+
+.notice-btn-yes,
+.notice-btn-no {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 32px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.notice-btn-yes {
+  background: linear-gradient(135deg, var(--accent-emerald), #00e88a);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 201, 123, 0.3);
+}
+
+.notice-btn-yes:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.notice-btn-no {
+  background: var(--bg-glass);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.notice-btn-no:hover {
+  background: var(--bg-glass-hover);
+}
+
+/* ─── Profile Play Banner (shown in modal when profile is required to play) ── */
+
+.profile-play-banner {
+  background: linear-gradient(135deg, rgba(255, 107, 43, 0.12), rgba(255, 200, 69, 0.08));
+  border: 1.5px solid rgba(255, 107, 43, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-gold);
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1.5;
 }

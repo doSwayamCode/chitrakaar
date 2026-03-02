@@ -16,6 +16,9 @@
     const LS_PIN  = 'chitrakaar-profile-pin';
     const LS_DATA = 'chitrakaar-profile-data';
 
+    // Stores a callback to run after successful login/register (set by requireProfileToPlay)
+    let pendingAction = null;
+
     function getSession() {
         return {
             username: localStorage.getItem(LS_USER),
@@ -61,7 +64,10 @@
 
     function getModal()   { return document.getElementById('profile-modal'); }
     function showModal()  { getModal().classList.add('active'); }
-    function closeModal() { getModal().classList.remove('active'); }
+    function closeModal() {
+        getModal().classList.remove('active');
+        pendingAction = null; // cancel any pending gate action
+    }
 
     function setModalError(msg) {
         const el = document.getElementById('profile-error');
@@ -246,12 +252,16 @@
         } else {
             // Not logged in — show login/register tabs
             const isRegister = activeTab === 'register';
+            const bannerHtml = pendingAction
+                ? `<div class="profile-play-banner">🎮 A profile is needed to play — it's free and takes 30 seconds!</div>`
+                : '';
             modal.querySelector('.profile-modal-body').innerHTML = `
                 <div class="profile-tabs">
                     <button class="ptab ${!isRegister ? 'active' : ''}" data-tab="login">Login</button>
                     <button class="ptab ${isRegister ? 'active' : ''}" data-tab="register">Create Profile</button>
                     <button class="ptab" data-tab="leaderboard">Hall of Fame</button>
                 </div>
+                ${bannerHtml}
                 <div id="profile-error" class="profile-error" style="display:none"></div>
                 ${isRegister ? renderRegisterForm() : renderLoginForm()}`;
 
@@ -310,7 +320,11 @@
                     saveSession(res.profile.username, pin, res.profile);
                     updateLobbyProfileBtn();
                     autoFillName(res.profile.displayName);
-                    await renderModal('profile');
+                    hideNameNotice();
+                    const queued = pendingAction;
+                    pendingAction = null;
+                    if (queued) { getModal().classList.remove('active'); setTimeout(queued, 80); }
+                    else { await renderModal('profile'); }
                 }
             } catch (e) {
                 setModalError('Network error. Please try again.');
@@ -346,7 +360,11 @@
                     saveSession(res.profile.username, pin, res.profile);
                     updateLobbyProfileBtn();
                     autoFillName(res.profile.displayName);
-                    await renderModal('profile');
+                    hideNameNotice();
+                    const queued = pendingAction;
+                    pendingAction = null;
+                    if (queued) { getModal().classList.remove('active'); setTimeout(queued, 80); }
+                    else { await renderModal('profile'); }
                 }
             } catch (e) {
                 setModalError('Network error. Please try again.');
@@ -378,6 +396,42 @@
             btn.textContent = '👤 Profile';
             btn.classList.remove('profile-logged-in');
         }
+    }
+
+    // ─── Name Conflict Check ──────────────────────────────────────────────────
+
+    function showNameNotice(displayName, username) {
+        const notice = document.getElementById('name-profile-notice');
+        if (!notice) return;
+        notice.innerHTML = `
+            <span class="notice-text">🔍 Profile found for <strong>${escapeHtmlProfile(displayName)}</strong>. Is this you?</span>
+            <button class="notice-btn-yes" id="notice-yes-btn">Yes, log me in</button>
+            <button class="notice-btn-no" id="notice-no-btn">No</button>
+        `;
+        notice.classList.remove('hidden');
+        document.getElementById('notice-yes-btn').addEventListener('click', () => {
+            hideNameNotice();
+            showModal();
+            renderModal('login').then(() => {
+                const usernameInput = document.getElementById('login-username');
+                if (usernameInput) usernameInput.value = username;
+            });
+        });
+        document.getElementById('notice-no-btn').addEventListener('click', hideNameNotice);
+    }
+
+    function hideNameNotice() {
+        const notice = document.getElementById('name-profile-notice');
+        if (notice) notice.classList.add('hidden');
+    }
+
+    async function checkNameConflict(displayName) {
+        if (!displayName || isLoggedIn()) { hideNameNotice(); return; }
+        try {
+            const res = await apiGet(`/api/profile/find-by-name?displayName=${encodeURIComponent(displayName)}`);
+            if (res.found) showNameNotice(res.displayName, res.username);
+            else hideNameNotice();
+        } catch (_) { hideNameNotice(); }
     }
 
     // ─── Badge Toast ──────────────────────────────────────────────────────────
@@ -443,6 +497,26 @@
         return d.innerHTML;
     }
 
+    // ─── Globals — defined immediately so app.js can reference them at click time ─
+
+    // Open the profile modal to any tab — available as soon as profile.js loads
+    window.openProfileModal = async function (tab) {
+        tab = tab || 'profile';
+        showModal();
+        await renderModal(tab);
+    };
+
+    // Mandatory profile gate — called from app.js before create/join room
+    window.requireProfileToPlay = function (callback) {
+        if (isLoggedIn()) { callback(); return; }
+        pendingAction = callback;
+        showModal();
+        renderModal('register');
+    };
+
+    // Name conflict check
+    window.checkNameConflict = checkNameConflict;
+
     // ─── Initialise ───────────────────────────────────────────────────────────
 
     function init() {
@@ -475,11 +549,15 @@
             });
         }
 
-        // Expose openProfileModal globally so leaderboard button can open Hall of Fame tab
-        window.openProfileModal = async function (tab = 'profile') {
-            showModal();
-            await renderModal(tab);
-        };
+        // Bind blur on player-name input to show profile notice
+        const nameInput = document.getElementById('player-name');
+        if (nameInput) {
+            nameInput.addEventListener('blur', () => {
+                const val = nameInput.value.trim();
+                if (val.length >= 2) checkNameConflict(val);
+                else hideNameNotice();
+            });
+        }
     }
 
     // Run after DOM is ready

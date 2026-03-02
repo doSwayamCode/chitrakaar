@@ -363,23 +363,31 @@ roomCodeInput.addEventListener('keydown', (e) => {
 
 createRoomBtn.addEventListener('click', () => {
     if (isJoining) return;
-    const name = playerNameInput.value.trim();
-    if (!name) { showToast('Enter your name first!', 'error'); return; }
-    const mode = gameModeSelect.value;
-    const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
-    const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
-    disableJoinButtons();
-    socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds });
+    if (!playerNameInput.value.trim()) { showToast('Enter your name first!', 'error'); return; }
+    window.requireProfileToPlay(() => {
+        const name = playerNameInput.value.trim();
+        if (!name) { showToast('Enter your name first!', 'error'); return; }
+        const mode = gameModeSelect.value;
+        const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
+        const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
+        disableJoinButtons();
+        socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds });
+    });
 });
 
 joinRoomBtn.addEventListener('click', () => {
     if (isJoining) return;
-    const name = playerNameInput.value.trim();
+    if (!playerNameInput.value.trim()) { showToast('Enter your name first!', 'error'); return; }
     const code = roomCodeInput.value.trim().toUpperCase();
-    if (!name) { showToast('Enter your name first!', 'error'); return; }
     if (!code) { showToast('Enter a room code!', 'error'); return; }
-    disableJoinButtons();
-    socket.emit('joinRoom', { roomCode: code, playerName: name, avatarId: selectedAvatarId });
+    window.requireProfileToPlay(() => {
+        const name = playerNameInput.value.trim();
+        const joinCode = roomCodeInput.value.trim().toUpperCase();
+        if (!name) { showToast('Enter your name first!', 'error'); return; }
+        if (!joinCode) { showToast('Enter a room code!', 'error'); return; }
+        disableJoinButtons();
+        socket.emit('joinRoom', { roomCode: joinCode, playerName: name, avatarId: selectedAvatarId });
+    });
 });
 
 // Quick play functionality removed
