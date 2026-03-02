@@ -154,8 +154,19 @@ async function connect() {
         await players.createIndex({ 'streak.current': -1 });
 
         // Drawings — TTL auto-deletes anything older than 7 days
+        // Use collMod to ensure the TTL is applied even if the index already existed
         const drawings = db.collection('drawings');
-        await drawings.createIndex({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+        try {
+            await drawings.createIndex({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+        } catch (_) {
+            // Index may already exist — try updating TTL via collMod
+            try {
+                await db.command({
+                    collMod: 'drawings',
+                    index: { keyPattern: { createdAt: 1 }, expireAfterSeconds: 7 * 24 * 60 * 60 }
+                });
+            } catch (_2) { /* ignore */ }
+        }
         await drawings.createIndex({ createdAt: -1 }); // for fast gallery fetch
 
         // Guest scores — TTL auto-deletes after 30 days; no signup needed
@@ -196,13 +207,17 @@ async function saveDrawing({ word, drawerName, strokes }) {
 
 /**
  * Fetch the most recent drawings for the gallery.
- * Returns stroke data so the client can replay them on canvas.
+ * Only returns drawings from the last 7 days, up to `limit` entries.
  */
-async function getGallery(limit = 24) {
+async function getGallery(limit = 300) {
     const database = getDb();
     if (!database) return [];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     return database.collection('drawings')
-        .find({}, { projection: { _id: 0, word: 1, drawerName: 1, strokes: 1, createdAt: 1 } })
+        .find(
+            { createdAt: { $gte: sevenDaysAgo } },
+            { projection: { _id: 0, word: 1, drawerName: 1, strokes: 1, createdAt: 1 } }
+        )
         .sort({ createdAt: -1 })
         .limit(limit)
         .toArray();

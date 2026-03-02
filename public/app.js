@@ -64,7 +64,6 @@ const playerNameInput = document.getElementById('player-name');
 const roomCodeInput = document.getElementById('room-code-input');
 const createRoomBtn = document.getElementById('create-room-btn');
 const joinRoomBtn = document.getElementById('join-room-btn');
-// Quick play button removed - const quickPlayBtn = document.getElementById('quick-play-btn');
 const leaderboardBtn = document.getElementById('leaderboard-btn');
 const gameModeSelect = document.getElementById('game-mode');
 
@@ -86,6 +85,7 @@ const sendBtn = document.getElementById('send-btn');
 const roundText = document.getElementById('round-text');
 const modeLabel = document.getElementById('mode-label');
 const wordHint = document.getElementById('word-hint');
+const wordLengthHint = document.getElementById('word-length-hint');
 const timerText = document.getElementById('timer-text');
 const timerPath = document.getElementById('timer-path');
 const toolsBar = document.getElementById('tools-bar');
@@ -389,8 +389,6 @@ joinRoomBtn.addEventListener('click', () => {
         socket.emit('joinRoom', { roomCode: joinCode, playerName: name, avatarId: selectedAvatarId });
     });
 });
-
-// Quick play functionality removed
 
 leaderboardBtn.addEventListener('click', () => {
     showLeaderboard();
@@ -872,6 +870,7 @@ socket.on('gameStarted', ({ round, totalRounds, drawerName, drawerId, mode, turn
     updateGamePlayerList(players, drawerId);
 
     wordHint.textContent = 'Waiting...';
+    if (wordLengthHint) { wordLengthHint.textContent = ''; wordLengthHint.style.display = 'none'; }
     addChatMessage('', `Game started! Round ${round}/${totalRounds}`, 'system');
     addChatMessage('', `${drawerName} is drawing!`, 'system');
 });
@@ -880,6 +879,7 @@ socket.on('gameStarted', ({ round, totalRounds, drawerName, drawerId, mode, turn
 socket.on('newTurn', ({ round, totalRounds, drawerName, drawerId }) => {
     roundText.textContent = `Round ${round}/${totalRounds}`;
     wordHint.textContent = 'Waiting...';
+    if (wordLengthHint) { wordLengthHint.textContent = ''; wordLengthHint.style.display = 'none'; }
     turnOverlay.classList.remove('hidden');
     turnInfo.textContent = `${drawerName} is choosing a word...`;
     wordChoicesDiv.classList.add('hidden');
@@ -916,10 +916,17 @@ socket.on('chooseWord', (words) => {
 });
 
 // Word Selected
-socket.on('wordSelected', ({ word, isDrawer: isMe }) => {
+socket.on('wordSelected', ({ word, isDrawer: isMe, wordLengths }) => {
     turnOverlay.classList.add('hidden');
     wordHint.textContent = word;
-    isDrawer = isMe;
+    // Show letter counts for guessers (e.g. "5, 3" for a two-word answer)
+    if (!isMe && wordLengths && wordLengths.length > 0) {
+        wordLengthHint.textContent = wordLengths.join(', ');
+        wordLengthHint.style.display = 'block';
+    } else {
+        wordLengthHint.textContent = '';
+        wordLengthHint.style.display = 'none';
+    }
     toolsBar.classList.toggle('hidden', !isMe);
     canvas.style.cursor = isMe ? 'crosshair' : 'default';
     chatInput.disabled = isMe;
@@ -934,6 +941,7 @@ socket.on('wordSelected', ({ word, isDrawer: isMe }) => {
 
 socket.on('hintRevealed', ({ hint }) => {
     wordHint.textContent = hint;
+    // keep letter count visible
     wordHint.classList.add('hint-revealed');
     setTimeout(() => wordHint.classList.remove('hint-revealed'), 600);
     
@@ -1069,6 +1077,7 @@ socket.on('timerUpdate', (timeLeft) => {
 // Turn End
 socket.on('turnEnd', ({ word, scores }) => {
     wordHint.textContent = `The word was: ${word}`;
+    if (wordLengthHint) { wordLengthHint.textContent = ''; wordLengthHint.style.display = 'none'; }
     chatInput.disabled = false;
     chatInput.placeholder = 'Type your guess...';
 
@@ -1097,11 +1106,7 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
 
     gameoverOverlay.classList.remove('hidden');
 
-    // Save player stats to local leaderboard
     const myPlayer = sortedPlayers.find(p => p.id === myId);
-    if (myPlayer && typeof savePlayerStats === 'function') {
-        savePlayerStats(myPlayer.name, myPlayer.score, currentMode);
-    }
 
     // Submit to persistent profile system (profile.js) — no-op if not logged in
     if (myPlayer && typeof window.submitGameResult === 'function') {

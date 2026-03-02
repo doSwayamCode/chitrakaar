@@ -334,9 +334,10 @@ function selectWord(room, word) {
     io.to(drawer.id).emit('wordSelected', { word, isDrawer: true });
 
     const hint = generateHint(word, []);
+    const wordLengths = word.split(' ').map(w => w.length);
     room.players.forEach(p => {
         if (p.id !== drawer.id) {
-            io.to(p.id).emit('wordSelected', { word: hint, isDrawer: false, wordLength: word.length });
+            io.to(p.id).emit('wordSelected', { word: hint, isDrawer: false, wordLength: word.length, wordLengths });
         }
     });
 
@@ -1071,7 +1072,7 @@ app.get('/api/profile/:username', async (req, res) => {
 // ─── GET /api/gallery ────────────────────────────────────────────────────────
 app.get('/api/gallery', async (req, res) => {
     try {
-        const drawings = await getGallery(24);
+        const drawings = await getGallery(300);
         return res.json(drawings);
     } catch (err) {
         console.error('[Gallery] Fetch error:', err.message);

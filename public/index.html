@@ -97,14 +97,14 @@
 
   <!-- Performance Optimization -->
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-  <link rel="preload" href="style.css?v=4.1" as="style" />
+  <link rel="preload" href="style.css?v=4.2" as="style" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=4.1" />
+  <link rel="stylesheet" href="style.css?v=4.2" />
   <script src="translations.js?v=3.2"></script>
-  <script src="leaderboard.js?v=3.3"></script>
-  <script src="share.js?v=3.2"></script>
+  <script src="leaderboard.js?v=3.5"></script>
+  <script src="share.js?v=3.3"></script>
 
   <!-- Structured Data (JSON-LD) -->
   <script type="application/ld+json">
@@ -447,7 +447,10 @@
             <span id="round-text">Round 1/3</span>
             <span id="mode-label" class="mode-badge small">Classic</span>
           </div>
-          <div id="word-hint" class="word-hint">Waiting...</div>
+          <div class="word-hint-group">
+            <div id="word-hint" class="word-hint">Waiting...</div>
+            <div id="word-length-hint" class="word-length-hint"></div>
+          </div>
           <div class="timer-container">
             <svg class="timer-ring" viewBox="0 0 36 36">
               <path class="timer-bg"
@@ -587,7 +590,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="profile.js?v=1.6"></script>
   <script src="gallery.js?v=1.2"></script>
-  <script src="app.js?v=3.4"></script>
+  <script src="app.js?v=3.6"></script>
 </body>
 
 </html>

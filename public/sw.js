@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chitrakaar-v1.0.4';
+const CACHE_NAME = 'chitrakaar-v1.0.8';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

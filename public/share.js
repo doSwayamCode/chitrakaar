@@ -74,30 +74,29 @@ function createStoryTemplate(canvasData, playerName, word) {
         storyCtx.fillText(`Drawn by ${playerName}`, 540, 1480);
         
         // Call to action
+        const siteUrl = 'chitrakaar-dct4.onrender.com';
         storyCtx.font = '36px Inter, sans-serif';
         storyCtx.fillStyle = '#9999bb';
-        storyCtx.fillText('Play now at chitrakaar-dct4.onrender.com', 540, 1560);
-        
-        // Load and draw QR Code image
+        storyCtx.fillText(`Play now at ${siteUrl}`, 540, 1560);
+
+        // Load QR Code, then show modal once it’s drawn (so it appears in the image)
         const qrImg = new Image();
-        qrImg.crossOrigin = 'anonymous';
         qrImg.onload = () => {
-            // Draw QR code image
-            storyCtx.drawImage(qrImg, 440, 1620, 200, 200);
+            storyCtx.drawImage(qrImg, 440, 1610, 200, 200);
+            showShareModal(storyCanvas);
         };
         qrImg.onerror = () => {
-            // Fallback if QR code image doesn't load
-            storyCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            storyCtx.fillRect(440, 1620, 200, 200);
-            storyCtx.fillStyle = '#666688';
-            storyCtx.font = '24px Inter, sans-serif';
-            storyCtx.fillText('SCAN TO PLAY', 540, 1735);
+            // QR not found — draw a placeholder label instead
+            storyCtx.fillStyle = 'rgba(255,255,255,0.08)';
+            storyCtx.fillRect(440, 1610, 200, 200);
+            storyCtx.fillStyle = '#667799';
+            storyCtx.font = '22px Inter, sans-serif';
+            storyCtx.textAlign = 'center';
+            storyCtx.fillText('chitrakaar-dct4', 540, 1700);
+            storyCtx.fillText('.onrender.com', 540, 1726);
+            showShareModal(storyCanvas);
         };
-        // Set QR code image source - UPDATE THIS PATH WITH YOUR QR CODE IMAGE
-        qrImg.src = '/qr-code.png';  // Place your QR code image as 'qr-code.png' in the public folder
-        
-        // Show share modal with the generated image
-        showShareModal(storyCanvas);
+        qrImg.src = '/qr-code.png';
     };
     tempImg.src = canvasData;
 }

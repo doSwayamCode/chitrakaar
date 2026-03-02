@@ -1,99 +1,5 @@
 // Leaderboard system for Chitrakaar
 
-// Store player stats in localStorage
-function savePlayerStats(playerName, score, gameMode) {
-    const stats = getLeaderboardData();
-    const timestamp = Date.now();
-    const today = new Date().toDateString();
-    
-    const entry = {
-        name: playerName,
-        score: score,
-        mode: gameMode,
-        timestamp: timestamp,
-        date: today
-    };
-    
-    stats.push(entry);
-    
-    // Keep only last 1000 entries
-    if (stats.length > 1000) {
-        stats.shift();
-    }
-    
-    localStorage.setItem('chitrakaar-stats', JSON.stringify(stats));
-}
-
-// Get leaderboard data
-function getLeaderboardData() {
-    const data = localStorage.getItem('chitrakaar-stats');
-    return data ? JSON.parse(data) : [];
-}
-
-// Calculate top players for today
-function getTodayTopPlayers(limit = 10) {
-    const stats = getLeaderboardData();
-    const today = new Date().toDateString();
-    
-    // Filter today's games
-    const todayGames = stats.filter(entry => entry.date === today);
-    
-    // Group by player name and calculate total score
-    const playerScores = {};
-    const playerGames = {};
-    
-    todayGames.forEach(entry => {
-        if (!playerScores[entry.name]) {
-            playerScores[entry.name] = 0;
-            playerGames[entry.name] = 0;
-        }
-        playerScores[entry.name] += entry.score;
-        playerGames[entry.name] += 1;
-    });
-    
-    // Convert to array and sort
-    const leaderboard = Object.keys(playerScores).map(name => ({
-        name: name,
-        score: playerScores[name],
-        gamesPlayed: playerGames[name],
-        avgScore: Math.round(playerScores[name] / playerGames[name])
-    }));
-    
-    leaderboard.sort((a, b) => b.score - a.score);
-    
-    return leaderboard.slice(0, limit);
-}
-
-// Calculate all-time top players
-function getAllTimeTopPlayers(limit = 10) {
-    const stats = getLeaderboardData();
-    
-    // Group by player name
-    const playerScores = {};
-    const playerGames = {};
-    
-    stats.forEach(entry => {
-        if (!playerScores[entry.name]) {
-            playerScores[entry.name] = 0;
-            playerGames[entry.name] = 0;
-        }
-        playerScores[entry.name] += entry.score;
-        playerGames[entry.name] += 1;
-    });
-    
-    // Convert to array and sort
-    const leaderboard = Object.keys(playerScores).map(name => ({
-        name: name,
-        score: playerScores[name],
-        gamesPlayed: playerGames[name],
-        avgScore: Math.round(playerScores[name] / playerGames[name])
-    }));
-    
-    leaderboard.sort((a, b) => b.score - a.score);
-    
-    return leaderboard.slice(0, limit);
-}
-
 // Show leaderboard modal — fetches all-time rankings from server
 async function showLeaderboard() {
     // Remove any existing instance
@@ -145,14 +51,19 @@ async function showLeaderboard() {
 
 function renderServerLeaderboard(players) {
     const medals = ['🥇', '🥈', '🥉'];
-    const rows = players.map((p, i) => `
+    const rows = players.map((p, i) => {
+        const score  = p.stats?.totalScore  ?? 0;
+        const games  = p.stats?.gamesPlayed ?? 0;
+        const avg    = games ? Math.round(score / games) : 0;
+        return `
         <tr class="rank-${i + 1}">
             <td class="rank-cell">${medals[i] || i + 1}</td>
-            <td class="player-cell">${escapeHtml(p.displayName || p.username)}</td>
-            <td class="score-cell">${p.totalScore || 0}</td>
-            <td class="games-cell">${p.gamesPlayed || 0}</td>
-            <td class="avg-cell">${p.gamesPlayed ? Math.round((p.totalScore || 0) / p.gamesPlayed) : 0}</td>
-        </tr>`).join('');
+            <td class="player-cell">${escapeHtml(p.displayName || p.username || 'Guest')}</td>
+            <td class="score-cell">${score}</td>
+            <td class="games-cell">${games}</td>
+            <td class="avg-cell">${avg}</td>
+        </tr>`;
+    }).join('');
     return `
         <table class="leaderboard-table">
             <thead>
@@ -164,47 +75,7 @@ function renderServerLeaderboard(players) {
         </table>`;
 }
 
-// Render leaderboard table
-function renderLeaderboardTable(players) {
-    if (players.length === 0) {
-        return '<p class="no-data">No games played yet! Be the first!</p>';
-    }
-    
-    return `
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th data-i18n="rank">Rank</th>
-                    <th data-i18n="player">Player</th>
-                    <th data-i18n="score">Score</th>
-                    <th data-i18n="gamesPlayed">Games</th>
-                    <th>Avg</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${players.map((player, index) => `
-                    <tr class="rank-${index + 1}">
-                        <td class="rank-cell">
-                            ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
-                        </td>
-                        <td class="player-cell">${escapeHtml(player.name)}</td>
-                        <td class="score-cell">${player.score}</td>
-                        <td class="games-cell">${player.gamesPlayed}</td>
-                        <td class="avg-cell">${player.avgScore}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
-
 // Export functions
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        savePlayerStats,
-        getLeaderboardData,
-        getTodayTopPlayers,
-        getAllTimeTopPlayers,
-        showLeaderboard
-    };
+    module.exports = { showLeaderboard };
 }
