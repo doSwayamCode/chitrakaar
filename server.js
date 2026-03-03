@@ -842,6 +842,9 @@ io.on('connection', (socket) => {
         if (playerIndex === -1) return;
 
         const player = room.players[playerIndex];
+        const wasDrawer = (playerIndex === room.currentDrawerIndex);
+        const wasBeforeDrawer = (playerIndex < room.currentDrawerIndex);
+
         room.players.splice(playerIndex, 1);
 
         if (room.players.length === 0) {
@@ -851,9 +854,15 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // Always notify remaining players
+        io.to(room.code).emit('playerLeft', {
+            playerName: player.name,
+            players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
+        });
+
         if (room.state === 'playing' || room.state === 'choosingWord') {
-            const drawer = getDrawer(room);
-            if (!drawer || player.id === drawer?.id || playerIndex <= room.currentDrawerIndex) {
+            if (wasDrawer) {
+                // Drawer left → immediately skip to next turn
                 clearTurnTimer(room);
                 if (room.currentDrawerIndex >= room.players.length) {
                     room.currentDrawerIndex = 0;
@@ -863,19 +872,26 @@ io.on('connection', (socket) => {
                         return;
                     }
                 }
-                io.to(room.code).emit('playerLeft', {
-                    playerName: player.name,
-                    players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
-                });
                 startWordChoice(room);
                 return;
             }
-        }
 
-        io.to(room.code).emit('playerLeft', {
-            playerName: player.name,
-            players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
-        });
+            if (wasBeforeDrawer) {
+                // A player before the drawer left → shift drawer index back, current turn continues
+                room.currentDrawerIndex--;
+            } else {
+                // Non-drawer (after drawer) left → clean up guesses, check if turn should end
+                room.guessedPlayers = room.guessedPlayers.filter(id => id !== player.id);
+                const drawer = getDrawer(room);
+                if (drawer) {
+                    const nonDrawerCount = room.players.length - 1;
+                    if (nonDrawerCount > 0 && room.guessedPlayers.length >= nonDrawerCount) {
+                        endTurn(room, true);
+                        return;
+                    }
+                }
+            }
+        }
 
         if (room.players.length < 2 && room.state !== 'waiting') {
             clearTurnTimer(room);

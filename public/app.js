@@ -1293,11 +1293,13 @@ function createPeer(targetId) {
             const audio = document.createElement('audio');
             audio.autoplay = true;
             audio.setAttribute('playsinline', '');
+            audio.volume = 1.0;
             document.body.appendChild(audio);
             remoteAudios[targetId] = audio;
             setupSpeakingDetection(streams[0], targetId);
         }
         remoteAudios[targetId].srcObject = streams[0];
+        remoteAudios[targetId].play().catch(() => {});
     };
 
     pc.onconnectionstatechange = () => {
