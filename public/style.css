@@ -818,6 +818,95 @@ body {
   color: var(--text-primary);
 }
 
+/* ─── Holi Special Mode ────────────────────────────────────────────────── */
+.holi-promo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 107, 43, 0.12), rgba(255, 79, 154, 0.12), rgba(255, 215, 0, 0.10));
+  border: 1.5px solid rgba(255, 79, 154, 0.45);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: holi-border-glow 2.5s ease-in-out infinite;
+}
+
+.holi-promo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 79, 154, 0.28);
+}
+
+.holi-promo-emoji {
+  font-size: 1.5rem;
+  animation: holi-bounce 1.8s ease-in-out infinite;
+  display: inline-block;
+}
+
+.holi-promo-text {
+  flex: 1;
+}
+
+.holi-promo-text strong {
+  display: block;
+  font-size: 0.83rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ff6b2b, #ff4f9a, #ffd700, #00c97b, #4e9bff, #ff6b2b);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: holi-shimmer 2.8s linear infinite;
+}
+
+.holi-promo-text span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.holi-promo-badge {
+  background: linear-gradient(135deg, #ff6b2b, #ff4f9a);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(255, 79, 154, 0.45);
+  animation: holi-pulse-badge 1.4s ease-in-out infinite;
+}
+
+.mode-selector.holi-active {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+              linear-gradient(135deg, #ff6b2b, #ff4f9a, #ffd700, #00c97b, #4e9bff) border-box;
+  box-shadow: 0 0 28px rgba(255, 79, 154, 0.18), 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes holi-shimmer {
+  0%   { background-position: 0% center; }
+  100% { background-position: 250% center; }
+}
+
+@keyframes holi-border-glow {
+  0%, 100% { border-color: rgba(255, 79, 154, 0.45); }
+  50%       { border-color: rgba(255, 215, 0, 0.65); }
+}
+
+@keyframes holi-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+@keyframes holi-pulse-badge {
+  0%, 100% { box-shadow: 0 2px 8px rgba(255, 79, 154, 0.45); }
+  50%       { box-shadow: 0 2px 18px rgba(255, 79, 154, 0.75); }
+}
+/* ──────────────────────────────────────────────────────────────────────── */
+
 .lobby-actions {
   display: flex;
   flex-direction: column;

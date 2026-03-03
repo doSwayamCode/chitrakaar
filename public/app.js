@@ -144,7 +144,8 @@ const MODE_LABELS = {
     nature: 'Nature',
     memes: 'Memes',
     hard: 'Hard Mode',
-    speed: 'Speed'
+    speed: 'Speed',
+    holi: '🎨 Holi Special'
 };
 
 function getRoomLink(code) {
@@ -1379,4 +1380,30 @@ socket.on('disconnect', () => teardownVoice());
 
 // Bind mic button
 if (micBtn) micBtn.addEventListener('click', toggleMic);
+
+// ─── Holi Mode Visual Enhancement ────────────────────────────────────────────
+(function () {
+    const modeCard = document.querySelector('.mode-selector');
+    const holiPromo = document.getElementById('holi-promo');
+    if (!gameModeSelect || !modeCard) return;
+
+    function updateHoliVibe() {
+        if (gameModeSelect.value === 'holi') {
+            modeCard.classList.add('holi-active');
+        } else {
+            modeCard.classList.remove('holi-active');
+        }
+    }
+
+    gameModeSelect.addEventListener('change', updateHoliVibe);
+    updateHoliVibe(); // apply on page load (holi is first option)
+
+    // Clicking the promo banner auto-selects Holi mode
+    if (holiPromo) {
+        holiPromo.addEventListener('click', () => {
+            gameModeSelect.value = 'holi';
+            updateHoliVibe();
+        });
+    }
+})();
 // ─────────────────────────────────────────────────────────────────────────

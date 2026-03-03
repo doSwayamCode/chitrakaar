@@ -112,7 +112,8 @@ const GAME_MODES = {
     nature: { label: 'Nature', turnTime: 80, rounds: 3 },
     memes: { label: 'Memes', turnTime: 70, rounds: 3 },
     hard: { label: 'Hard Mode', turnTime: 60, rounds: 4 },
-    speed: { label: 'Speed', turnTime: 30, rounds: 4 }
+    speed: { label: 'Speed', turnTime: 30, rounds: 4 },
+    holi: { label: '🎨 Holi Special', turnTime: 80, rounds: 3 }
 };
 
 

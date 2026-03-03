@@ -194,6 +194,20 @@ const words = {
         "Bollywood Dance", "Item Number", "Wedding DJ", "Sangeet"
     ],
 
+    holi: [
+        "Gulal", "Pichkari", "Thandai", "Gujiya", "Laddoo",
+        "Holika", "Prahlad", "Dahan", "Abir", "Dhol",
+        "Dholak", "Rang", "Bhaang", "Bhang Lassi", "Water Balloon",
+        "Bucket", "White Clothes", "Rainbow", "Barsana", "Mathura",
+        "Vrindavan", "Radha", "Krishna", "Lathmar Holi", "Bonfire",
+        "Firewood", "Spring", "Marigold", "Flower Petals", "Rangoli",
+        "Pink", "Yellow", "Green", "Blue", "Purple",
+        "Orange", "Sindoor", "Tilak", "Dance", "Folk Song",
+        "Drum Beat", "Street Party", "Sweets", "Namkeen", "Pua",
+        "Kanji", "Dahi Vada", "Papad", "Mango Drink", "Coconut",
+        "Water Fight", "Spray Bottle", "Color Powder", "Phoolon Ki Holi"
+    ],
+
     sports: [
         "Kabaddi", "Kho Kho", "Gilli Danda", "Lagori",
         "Kushti Wrestling", "Mallakhamb", "Silambam", "Gatka",
@@ -227,7 +241,8 @@ const modeCategories = {
     history: ['monuments', 'personalities'],
     nature: ['animals', 'nature'],
     memes: ['memes', 'personalities', 'bollywood'],
-    hard: ['monuments', 'personalities', 'places']
+    hard: ['monuments', 'personalities', 'places'],
+    holi: ['holi']
 };
 
 // Flatten words, optionally filtered by mode
