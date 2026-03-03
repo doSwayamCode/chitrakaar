@@ -807,6 +807,30 @@ io.on('connection', (socket) => {
         });
     });
 
+    // ─── WebRTC Voice Chat Signaling ─────────────────────────────────────
+    socket.on('rtc-offer', ({ targetId, offer }) => {
+        if (!currentRoom) return;
+        io.to(targetId).emit('rtc-offer', { fromId: socket.id, offer });
+    });
+
+    socket.on('rtc-answer', ({ targetId, answer }) => {
+        if (!currentRoom) return;
+        io.to(targetId).emit('rtc-answer', { fromId: socket.id, answer });
+    });
+
+    socket.on('rtc-ice-candidate', ({ targetId, candidate }) => {
+        if (!currentRoom) return;
+        io.to(targetId).emit('rtc-ice-candidate', { fromId: socket.id, candidate });
+    });
+
+    socket.on('voice-state', ({ muted }) => {
+        if (!currentRoom) return;
+        const room = rooms.get(currentRoom);
+        if (!room) return;
+        socket.to(room.code).emit('voice-state', { fromId: socket.id, muted });
+    });
+    // ─────────────────────────────────────────────────────────────────────
+
     socket.on('disconnect', () => {
         rateLimits.delete(socket.id);
 

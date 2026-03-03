@@ -40,8 +40,8 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - network-first for app files, cache-first for static assets
 self.addEventListener('fetch', (event) => {
-  // Skip socket.io and non-GET requests
-  if (event.request.url.includes('socket.io') || event.request.method !== 'GET') {
+  // Skip non-http(s) schemes (e.g. chrome-extension://), socket.io, and non-GET requests
+  if (!event.request.url.startsWith('http') || event.request.url.includes('socket.io') || event.request.method !== 'GET') {
     return;
   }
 

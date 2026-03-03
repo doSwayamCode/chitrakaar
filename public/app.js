@@ -9,9 +9,7 @@ if ('serviceWorker' in navigator) {
 let deferredPrompt;
 
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar from appearing on mobile
-    e.preventDefault();
-    // Stash the event so it can be triggered later
+    // Let the browser show the native install banner automatically
     deferredPrompt = e;
 });
 
@@ -458,6 +456,7 @@ function updateGamePlayerList(playerArray, drawerId) {
           <div class="player-name">${escapeHtml(p.name)}${p.id === myId ? ' (You)' : ''}</div>
           <div class="player-score">${p.score} pts</div>
         </div>
+        <span class="speaking-dot" title="Speaking"></span>
         ${statusText ? `<div class="player-status">${statusText}</div>` : ''}
       </div>`;
     }).join('');
@@ -819,6 +818,11 @@ socket.on('playerJoined', ({ playerName, players: playerArray }) => {
     players = playerArray;
     updateWaitingRoom(playerArray);
     addChatMessage('', `${playerName} joined the room`, 'system');
+    // If we already have voice active, connect to the new player
+    if (voiceEnabled) {
+        const newPlayer = playerArray.find(p => p.id !== myId && !peerConnections[p.id]);
+        if (newPlayer) createOffer(newPlayer.id);
+    }
 });
 
 // Player Left
@@ -1206,3 +1210,186 @@ function shareGameResultToWhatsApp() {
     window.open(whatsappUrl, '_blank');
     showToast('Opening WhatsApp...', 'success');
 }
+
+// ─── Voice Chat (WebRTC) ─────────────────────────────────────────────────
+const STUN_SERVERS = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
+
+let voiceEnabled = false;
+let micMuted = true;
+let localStream = null;
+const peerConnections = {};
+const remoteAudios = {};
+
+const micBtn = document.getElementById('mic-toggle-btn');
+
+function updateMicButtons() {
+    const icon = micMuted ? '🔇' : '🎤';
+    if (micBtn) {
+        micBtn.querySelector('.mic-icon').textContent = icon;
+        micBtn.classList.toggle('muted', micMuted);
+        micBtn.classList.toggle('active', !micMuted);
+    }
+}
+
+async function enableVoice() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        voiceEnabled = true;
+        micMuted = false;
+        localStream.getAudioTracks().forEach(t => t.enabled = true);
+        updateMicButtons();
+        socket.emit('voice-state', { muted: false });
+        for (const p of players) {
+            if (p.id !== myId) await createOffer(p.id);
+        }
+        setupSpeakingDetection(localStream, myId);
+        showToast('🎤 Mic on — you can talk!', 'success');
+    } catch (err) {
+        showToast('Mic access denied. Allow microphone in browser settings.', 'error');
+    }
+}
+
+function toggleMic() {
+    if (!voiceEnabled) {
+        enableVoice();
+        return;
+    }
+    micMuted = !micMuted;
+    if (localStream) {
+        localStream.getAudioTracks().forEach(t => t.enabled = !micMuted);
+    }
+    updateMicButtons();
+    socket.emit('voice-state', { muted: micMuted });
+    showToast(micMuted ? '🔇 Mic muted' : '🎤 Mic unmuted', 'info');
+}
+
+function teardownVoice() {
+    Object.values(peerConnections).forEach(pc => pc.close());
+    Object.keys(peerConnections).forEach(k => delete peerConnections[k]);
+    Object.values(remoteAudios).forEach(a => a.remove());
+    Object.keys(remoteAudios).forEach(k => delete remoteAudios[k]);
+    if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+    }
+    voiceEnabled = false;
+    micMuted = true;
+    updateMicButtons();
+}
+
+async function createOffer(targetId) {
+    if (peerConnections[targetId]) return;
+    const pc = createPeer(targetId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('rtc-offer', { targetId, offer });
+}
+
+function createPeer(targetId) {
+    if (peerConnections[targetId]) peerConnections[targetId].close();
+    const pc = new RTCPeerConnection(STUN_SERVERS);
+    peerConnections[targetId] = pc;
+
+    if (localStream) {
+        localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    }
+
+    pc.onicecandidate = ({ candidate }) => {
+        if (candidate) socket.emit('rtc-ice-candidate', { targetId, candidate });
+    };
+
+    pc.ontrack = ({ streams }) => {
+        if (!remoteAudios[targetId]) {
+            const audio = document.createElement('audio');
+            audio.autoplay = true;
+            audio.setAttribute('playsinline', '');
+            document.body.appendChild(audio);
+            remoteAudios[targetId] = audio;
+            setupSpeakingDetection(streams[0], targetId);
+        }
+        remoteAudios[targetId].srcObject = streams[0];
+    };
+
+    pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+            pc.close();
+            delete peerConnections[targetId];
+        }
+    };
+
+    return pc;
+}
+
+function setupSpeakingDetection(stream, playerId) {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        let speaking = false;
+
+        function checkVolume() {
+            analyser.getByteFrequencyData(data);
+            const vol = data.reduce((a, b) => a + b, 0) / data.length;
+            const nowSpeaking = vol > 15;
+            if (nowSpeaking !== speaking) {
+                speaking = nowSpeaking;
+                markSpeaking(playerId, speaking);
+            }
+            requestAnimationFrame(checkVolume);
+        }
+        checkVolume();
+    } catch (_) {}
+}
+
+function markSpeaking(playerId, isSpeaking) {
+    const el = document.querySelector(`.game-player-item[data-id="${playerId}"] .speaking-dot`);
+    if (el) el.classList.toggle('active', isSpeaking);
+}
+
+// Signaling listeners
+socket.on('rtc-offer', async ({ fromId, offer }) => {
+    if (!voiceEnabled) return;
+    const pc = createPeer(fromId);
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit('rtc-answer', { targetId: fromId, answer });
+});
+
+socket.on('rtc-answer', async ({ fromId, answer }) => {
+    const pc = peerConnections[fromId];
+    if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+});
+
+socket.on('rtc-ice-candidate', async ({ fromId, candidate }) => {
+    const pc = peerConnections[fromId];
+    if (pc) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+    }
+});
+
+socket.on('voice-state', ({ fromId, muted }) => {
+    const dot = document.querySelector(`.game-player-item[data-id="${fromId}"] .speaking-dot`);
+    if (dot) dot.classList.toggle('voice-muted', muted);
+});
+
+// Connect to newcomers if we're already in voice
+socket.on('playerJoined-voice', ({ newPlayerId }) => {
+    if (voiceEnabled && newPlayerId !== myId) createOffer(newPlayerId);
+});
+
+// Teardown on game end / disconnect
+socket.on('gameEnded', () => teardownVoice());
+socket.on('disconnect', () => teardownVoice());
+
+// Bind mic button
+if (micBtn) micBtn.addEventListener('click', toggleMic);
+// ─────────────────────────────────────────────────────────────────────────
