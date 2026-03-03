@@ -361,10 +361,10 @@ roomCodeInput.addEventListener('keydown', (e) => {
 
 createRoomBtn.addEventListener('click', () => {
     if (isJoining) return;
-    if (!playerNameInput.value.trim()) { showToast('Enter your name first!', 'error'); return; }
+    if (!playerNameInput.value.trim()) { return; }
     window.requireProfileToPlay(() => {
         const name = playerNameInput.value.trim();
-        if (!name) { showToast('Enter your name first!', 'error'); return; }
+        if (!name) { return; }
         const mode = gameModeSelect.value;
         const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
         const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
@@ -375,14 +375,14 @@ createRoomBtn.addEventListener('click', () => {
 
 joinRoomBtn.addEventListener('click', () => {
     if (isJoining) return;
-    if (!playerNameInput.value.trim()) { showToast('Enter your name first!', 'error'); return; }
+    if (!playerNameInput.value.trim()) { return; }
     const code = roomCodeInput.value.trim().toUpperCase();
-    if (!code) { showToast('Enter a room code!', 'error'); return; }
+    if (!code) { return; }
     window.requireProfileToPlay(() => {
         const name = playerNameInput.value.trim();
         const joinCode = roomCodeInput.value.trim().toUpperCase();
-        if (!name) { showToast('Enter your name first!', 'error'); return; }
-        if (!joinCode) { showToast('Enter a room code!', 'error'); return; }
+        if (!name) { return; }
+        if (!joinCode) { return; }
         disableJoinButtons();
         socket.emit('joinRoom', { roomCode: joinCode, playerName: name, avatarId: selectedAvatarId });
     });
@@ -718,7 +718,6 @@ document.getElementById('save-btn').addEventListener('click', () => {
     link.download = `chitrakaar-drawing-${Date.now()}.png`;
     link.href = canvas.toDataURL();
     link.click();
-    showToast('Drawing saved! 📥', 'success');
 });
 
 sendBtn.addEventListener('click', () => {
@@ -749,12 +748,9 @@ socket.on('error', ({ message }) => {
     // more helpful message instead of the generic "Room not found" one.
     const isFromLink = !!new URLSearchParams(window.location.search).get('room');
     if (isFromLink && message.toLowerCase().includes('room not found')) {
-        showToast('This room has expired or no longer exists. Ask your friend to create a new room!', 'error');
         clearRoomUrl();
         roomCodeInput.value = '';
         document.getElementById('join-banner')?.remove();
-    } else {
-        showToast(message, 'error');
     }
     enableJoinButtons();
 });
@@ -955,8 +951,6 @@ socket.on('hintRevealed', ({ hint }) => {
     notification.textContent = '💡 Letter revealed!';
     document.querySelector('.canvas-area').appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
-    
-    showToast('💡 Hint revealed!', 'info');
 });
 
 // Drawing events from others
@@ -994,8 +988,6 @@ socket.on('correctGuess', ({ playerName, playerId, score, scores }) => {
         chatInput.disabled = true;
         chatInput.placeholder = "You guessed it! 🎉";
         showToast('🎉 Shabash! You got it!', 'success');
-    } else {
-        showToast(`${playerName} guessed the word!`, 'info');
     }
 });
 
@@ -1141,7 +1133,6 @@ socket.on('gameOver', ({ players: sortedPlayers, winner }) => {
 
 // Game Ended (not enough players)
 socket.on('gameEnded', ({ message }) => {
-    showToast(message, 'error');
     showScreen('waiting-screen');
     
     // Track game cancellation
@@ -1197,8 +1188,6 @@ function shareGameResultToInstagram() {
     // Use the existing createStoryTemplate function
     if (typeof createStoryTemplate === 'function') {
         createStoryTemplate(canvasData, playerName, '');
-    } else {
-        showToast('Share feature unavailable', 'error');
     }
 }
 
@@ -1208,7 +1197,6 @@ function shareGameResultToWhatsApp() {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     
     window.open(whatsappUrl, '_blank');
-    showToast('Opening WhatsApp...', 'success');
 }
 
 // ─── Voice Chat (WebRTC) ─────────────────────────────────────────────────
@@ -1248,9 +1236,7 @@ async function enableVoice() {
             if (p.id !== myId) await createOffer(p.id);
         }
         setupSpeakingDetection(localStream, myId);
-        showToast('🎤 Mic on — you can talk!', 'success');
     } catch (err) {
-        showToast('Mic access denied. Allow microphone in browser settings.', 'error');
     }
 }
 
@@ -1265,7 +1251,6 @@ function toggleMic() {
     }
     updateMicButtons();
     socket.emit('voice-state', { muted: micMuted });
-    showToast(micMuted ? '🔇 Mic muted' : '🎤 Mic unmuted', 'info');
 }
 
 function teardownVoice() {
