@@ -1,6 +1,6 @@
 // ─── Chitrakaar Drawing Gallery ───────────────────────────────────────────────
 // Fetches recent drawings from /api/gallery and replays stroke data on canvas.
-// Drawings are auto-deleted from MongoDB after 7 days via TTL index.
+// Drawings are auto-deleted from MongoDB after 30 days via TTL index.
 // ──────────────────────────────────────────────────────────────────────────────
 
 (function () {
@@ -103,7 +103,8 @@
         document.body.appendChild(lb);
 
         const canvas = document.getElementById('gallery-lb-canvas');
-        // Use device pixel ratio for crisp canvas on retina
+        // Set canvas to physical pixel size. replayStrokes maps normalized
+        // coords (0-1) against canvas.width/height, so no ctx.scale needed.
         const DPR = window.devicePixelRatio || 1;
         const W = Math.min(window.innerWidth - 48, 640);
         const H = Math.round(W * 0.625); // 16:10 aspect
@@ -111,7 +112,9 @@
         canvas.height = H * DPR;
         canvas.style.width  = W + 'px';
         canvas.style.height = H + 'px';
-        canvas.getContext('2d').scale(DPR, DPR);
+        // Do NOT pre-scale the context — replayStrokes uses canvas.width/height
+        // (physical pixels) directly, so a ctx.scale(DPR,DPR) would double-scale
+        // the coordinates and clip the drawing to the top-left quarter.
 
         replayStrokes(canvas, drawing.strokes);
 
@@ -150,13 +153,15 @@
             const canvas = document.createElement('canvas');
             canvas.className = 'gallery-canvas';
 
-            // Buffer: 8:5 ratio at 2x for sharpness. CSS controls display size.
+            // Physical pixel size = logical size × DPR for sharp rendering.
+            // replayStrokes maps normalized coords (0-1) against canvas.width/height,
+            // so we must NOT pre-scale the context — that would double the effective
+            // scale and clip strokes to the top-left fraction of the canvas.
             const DPR = Math.min(window.devicePixelRatio || 1, 2);
             canvas.width  = 400 * DPR;
             canvas.height = 250 * DPR;
             canvas.style.width  = '100%';
             // Do NOT set canvas.style.height — CSS aspect-ratio handles it
-            canvas.getContext('2d').scale(DPR, DPR);
 
             card.appendChild(canvas);
             card.insertAdjacentHTML('beforeend', `

@@ -153,17 +153,17 @@ async function connect() {
         await players.createIndex({ 'stats.gamesPlayed': -1 });
         await players.createIndex({ 'streak.current': -1 });
 
-        // Drawings — TTL auto-deletes anything older than 7 days
+        // Drawings — TTL auto-deletes anything older than 30 days
         // Use collMod to ensure the TTL is applied even if the index already existed
         const drawings = db.collection('drawings');
         try {
-            await drawings.createIndex({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+            await drawings.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
         } catch (_) {
             // Index may already exist — try updating TTL via collMod
             try {
                 await db.command({
                     collMod: 'drawings',
-                    index: { keyPattern: { createdAt: 1 }, expireAfterSeconds: 7 * 24 * 60 * 60 }
+                    index: { keyPattern: { createdAt: 1 }, expireAfterSeconds: 30 * 24 * 60 * 60 }
                 });
             } catch (_2) { /* ignore */ }
         }
@@ -207,15 +207,15 @@ async function saveDrawing({ word, drawerName, strokes }) {
 
 /**
  * Fetch the most recent drawings for the gallery.
- * Only returns drawings from the last 7 days, up to `limit` entries.
+ * Only returns drawings from the last 30 days, up to `limit` entries.
  */
 async function getGallery(limit = 300) {
     const database = getDb();
     if (!database) return [];
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     return database.collection('drawings')
         .find(
-            { createdAt: { $gte: sevenDaysAgo } },
+            { createdAt: { $gte: thirtyDaysAgo } },
             { projection: { _id: 0, word: 1, drawerName: 1, strokes: 1, createdAt: 1 } }
         )
         .sort({ createdAt: -1 })
