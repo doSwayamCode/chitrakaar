@@ -21,6 +21,17 @@ window.addEventListener('appinstalled', () => {
 
 const socket = io({ reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
 
+// ─── Session ID (persists across refreshes for the rejoin feature) ───────────────
+(function () {
+    let id = localStorage.getItem('chitrakaarSessionId');
+    if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2) + Date.now().toString(36));
+        localStorage.setItem('chitrakaarSessionId', id);
+    }
+    window._CKTK_SESSION_ID = id;
+}());
+
 const loadingScreen = document.getElementById('loading-screen');
 const loadingStatus = document.getElementById('loading-status');
 
@@ -34,6 +45,15 @@ function hideLoadingScreen() {
 socket.on('connect', () => {
     myId = socket.id;
     if (loadingStatus) loadingStatus.textContent = 'Connected!';
+
+    // If we were in a room before the refresh/disconnect, attempt a silent rejoin
+    const savedRoom = localStorage.getItem('chitrakaarRoom');
+    if (savedRoom) {
+        if (loadingStatus) loadingStatus.textContent = 'Rejoining your room...';
+        socket.emit('rejoin', { sessionId: window._CKTK_SESSION_ID, roomCode: savedRoom });
+        return; // hold loading screen until rejoinSuccess or rejoinFailed
+    }
+
     setTimeout(() => {
         hideLoadingScreen();
         // Auto-fill room code if URL contains ?room=XXXXXX
@@ -47,6 +67,100 @@ socket.on('connect', () => {
         }
     }, 400);
 });
+
+// ─── Rejoin result handlers ─────────────────────────────────────────────────────
+
+socket.on('rejoinFailed', () => {
+    localStorage.removeItem('chitrakaarRoom');
+    setTimeout(() => {
+        hideLoadingScreen();
+        const params = new URLSearchParams(window.location.search);
+        const codeFromUrl = params.get('room');
+        if (codeFromUrl) {
+            const code = codeFromUrl.toUpperCase().trim();
+            roomCodeInput.value = code;
+            showJoinBanner(code);
+        }
+    }, 200);
+});
+
+socket.on('rejoinSuccess', (data) => {
+    roomCode = data.code;
+    currentMode = data.mode;
+    players = data.players;
+    pushRoomUrl(data.code);
+
+    if (data.state === 'waiting') {
+        displayRoomCode.textContent = roomCode;
+        displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
+        displayPublic.classList.toggle('hidden', !data.isPublic);
+        if (data.totalRounds && roundsSelect) roundsSelect.value = data.totalRounds;
+        if (roundsSelect) roundsSelect.disabled = true;
+        updateWaitingRoom(data.players);
+        hideLoadingScreen();
+        showScreen('waiting-screen');
+        showToast('\u2705 Rejoined your room!', 'success');
+
+    } else if (data.state === 'playing' || data.state === 'choosingWord' || data.state === 'roundEnd') {
+        currentTurnTime = data.turnTime;
+        hideLoadingScreen();
+        showScreen('game-screen');
+        setTimeout(resizeCanvas, 50);
+
+        roundText.textContent = `Round ${data.round}/${data.totalRounds}`;
+        modeLabel.textContent = MODE_LABELS[currentMode] || 'Classic';
+        gameoverOverlay.classList.add('hidden');
+
+        // Rejoining player is a guesser (the drawer slot was advanced on disconnect)
+        isDrawer = false;
+        toolsBar.classList.add('hidden');
+        canvas.style.cursor = 'default';
+        chatInput.disabled = false;
+        chatInput.placeholder = 'Type your guess...';
+
+        if (data.drawerName) {
+            turnOverlay.classList.add('hidden');
+            wordChoicesDiv.classList.add('hidden');
+        }
+
+        updateGamePlayerList(players, data.drawerId);
+
+        // Show word hint
+        if (data.wordHint) {
+            wordHint.textContent = data.wordHint;
+            if (data.wordLengths && wordLengthHint) {
+                wordLengthHint.textContent = data.wordLengths.join(', ');
+                wordLengthHint.style.display = 'block';
+            }
+        } else {
+            wordHint.textContent = 'Waiting...';
+        }
+
+        if (data.timerLeft !== undefined && timerText) timerText.textContent = data.timerLeft;
+
+        // Replay the current stroke history so the canvas matches the room
+        if (data.drawHistory && data.drawHistory.length > 0) {
+            setTimeout(() => {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                data.drawHistory.forEach(d => {
+                    if (d.type === 'line') drawLine(d.x1, d.y1, d.x2, d.y2, d.color, d.size);
+                    else if (d.type === 'fill') floodFill(d.x, d.y, d.color);
+                });
+            }, 300);
+        }
+
+        addChatMessage('', `You rejoined the game.${data.drawerName ? ' ' + data.drawerName + ' is drawing.' : ''}`, 'system');
+        showToast('\u2705 Back in the game!', 'success');
+
+    } else {
+        // gameOver or unknown state — fall back to lobby
+        localStorage.removeItem('chitrakaarRoom');
+        hideLoadingScreen();
+    }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 socket.io.on('reconnect_attempt', (attempt) => {
     if (loadingStatus && loadingScreen && !loadingScreen.classList.contains('fade-out')) {
@@ -181,6 +295,7 @@ function showScreen(screenId) {
     if (screenId === 'lobby-screen') {
         enableJoinButtons();
         clearRoomUrl(); // remove ?room= from URL when back at lobby
+        localStorage.removeItem('chitrakaarRoom'); // clear rejoin slot
     }
     
     // Resize canvas when showing game screen
@@ -370,7 +485,7 @@ createRoomBtn.addEventListener('click', () => {
         const lobbyRoundsSelect = document.getElementById('lobby-rounds-select');
         const rounds = lobbyRoundsSelect ? parseInt(lobbyRoundsSelect.value) : 5;
         disableJoinButtons();
-        socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds });
+        socket.emit('createRoom', { playerName: name, avatarId: selectedAvatarId, mode: mode, isPublic: false, rounds: rounds, sessionId: window._CKTK_SESSION_ID });
     });
 });
 
@@ -385,7 +500,7 @@ joinRoomBtn.addEventListener('click', () => {
         if (!name) { return; }
         if (!joinCode) { return; }
         disableJoinButtons();
-        socket.emit('joinRoom', { roomCode: joinCode, playerName: name, avatarId: selectedAvatarId });
+        socket.emit('joinRoom', { roomCode: joinCode, playerName: name, avatarId: selectedAvatarId, sessionId: window._CKTK_SESSION_ID });
     });
 });
 
@@ -761,6 +876,7 @@ socket.on('roomCreated', ({ code, mode, isPublic: pub, players: playerArray, tot
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
+    localStorage.setItem('chitrakaarRoom', code);
     displayRoomCode.textContent = code;
     displayMode.textContent = MODE_LABELS[currentMode] || 'Classic';
     displayPublic.classList.toggle('hidden', !pub);
@@ -787,6 +903,7 @@ socket.on('roomJoined', ({ code, mode, isPublic: pub, players: playerArray, tota
     roomCode = code;
     currentMode = mode || 'classic';
     players = playerArray;
+    localStorage.setItem('chitrakaarRoom', code);
     pushRoomUrl(code); // update browser URL to ?room=CODE
     
     // Track room joining

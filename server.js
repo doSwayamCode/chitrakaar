@@ -121,6 +121,10 @@ const rooms = new Map();
 const publicRooms = new Set();
 const MAX_ROOMS = 1000;
 
+// Disconnected player sessions — keyed by client sessionId.
+// Allows players to rejoin within 30 seconds after a refresh/drop.
+const disconnectedPlayers = new Map();
+
 // Analytics tracking
 const analytics = {
     totalGames: 0,
@@ -539,7 +543,12 @@ io.on('connection', (socket) => {
     const currentConnections = io.sockets.sockets.size;
     analytics.peakConcurrent = Math.max(analytics.peakConcurrent, currentConnections);
 
-    socket.on('createRoom', ({ playerName, avatarId, mode, isPublic, rounds }) => {
+    socket.on('createRoom', ({ playerName, avatarId, mode, isPublic, rounds, sessionId }) => {
+        if (sessionId && typeof sessionId === 'string' && sessionId.length <= 64) {
+            socket._sessionId = sessionId;
+            const pending = disconnectedPlayers.get(sessionId);
+            if (pending) { clearTimeout(pending.timer); disconnectedPlayers.delete(sessionId); }
+        }
         if (rooms.size >= MAX_ROOMS) {
             socket.emit('error', { message: 'Server is at capacity. Please try again later.' });
             return;
@@ -566,7 +575,12 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('joinRoom', ({ roomCode, playerName, avatarId }) => {
+    socket.on('joinRoom', ({ roomCode, playerName, avatarId, sessionId }) => {
+        if (sessionId && typeof sessionId === 'string' && sessionId.length <= 64) {
+            socket._sessionId = sessionId;
+            const pending = disconnectedPlayers.get(sessionId);
+            if (pending) { clearTimeout(pending.timer); disconnectedPlayers.delete(sessionId); }
+        }
         const name = sanitizeName(playerName);
         if (!name) {
             socket.emit('error', { message: 'Please enter a valid name.' });
@@ -819,6 +833,67 @@ io.on('connection', (socket) => {
         io.to(targetId).emit('rtc-answer', { fromId: socket.id, answer });
     });
 
+    // ─── Rejoin ───────────────────────────────────────────────────────────────
+    socket.on('rejoin', ({ sessionId, roomCode }) => {
+        if (!sessionId || typeof sessionId !== 'string') return;
+
+        const pending = disconnectedPlayers.get(sessionId);
+        if (!pending || pending.roomCode !== roomCode) {
+            socket.emit('rejoinFailed');
+            return;
+        }
+
+        const room = rooms.get(roomCode);
+        if (!room) {
+            clearTimeout(pending.timer);
+            disconnectedPlayers.delete(sessionId);
+            socket.emit('rejoinFailed');
+            return;
+        }
+
+        // Clear expiry and restore
+        clearTimeout(pending.timer);
+        disconnectedPlayers.delete(sessionId);
+
+        socket._sessionId = sessionId;
+        const restoredPlayer = { id: socket.id, name: pending.player.name, score: pending.player.score, avatarId: pending.player.avatarId };
+        room.players.push(restoredPlayer);
+        currentRoom = roomCode;
+        socket.join(roomCode);
+
+        // Notify room of rejoin
+        io.to(roomCode).emit('playerJoined', {
+            playerName: restoredPlayer.name,
+            players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId }))
+        });
+
+        // Build catch-up state for the rejoining client
+        const drawer = getDrawer(room);
+        const payload = {
+            code: roomCode,
+            mode: room.mode,
+            isPublic: room.isPublic,
+            totalRounds: room.totalRounds,
+            players: room.players.map(p => ({ id: p.id, name: p.name, score: p.score, avatarId: p.avatarId })),
+            state: room.state,
+            round: room.currentRound + 1,
+            drawerName: drawer ? drawer.name : null,
+            drawerId: drawer ? drawer.id : null,
+            turnTime: room.turnTime,
+            timerLeft: room.turnTimeLeft,
+            drawHistory: room.drawHistory,
+        };
+
+        // Send the current hint (never the actual word) to rejoining non-drawer
+        if ((room.state === 'playing' || room.state === 'choosingWord' || room.state === 'roundEnd') && room.currentWord) {
+            payload.wordHint = generateHint(room.currentWord, room.revealedHints || []);
+            payload.wordLengths = room.currentWord.split(' ').map(w => w.length);
+        }
+
+        socket.emit('rejoinSuccess', payload);
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
     socket.on('rtc-ice-candidate', ({ targetId, candidate }) => {
         if (!currentRoom) return;
         io.to(targetId).emit('rtc-ice-candidate', { fromId: socket.id, candidate });
@@ -845,6 +920,19 @@ io.on('connection', (socket) => {
         const player = room.players[playerIndex];
         const wasDrawer = (playerIndex === room.currentDrawerIndex);
         const wasBeforeDrawer = (playerIndex < room.currentDrawerIndex);
+
+        // Save player state for potential rejoin within 30 seconds
+        if (socket._sessionId) {
+            const existing = disconnectedPlayers.get(socket._sessionId);
+            if (existing) clearTimeout(existing.timer);
+            const _sid = socket._sessionId;
+            const timer = setTimeout(() => disconnectedPlayers.delete(_sid), 30000);
+            disconnectedPlayers.set(socket._sessionId, {
+                roomCode: currentRoom,
+                player: { name: player.name, score: player.score, avatarId: player.avatarId },
+                timer
+            });
+        }
 
         room.players.splice(playerIndex, 1);
 

@@ -4,7 +4,7 @@ const words = {
         "Mughal-e-Azam", "Dil Chahta Hai", "Zindagi Na Milegi Dobara",
         "3 Idiots", "PK", "Barfi", "Queen", "Andaz Apna Apna",
         "Hera Pheri", "Golmaal", "Dhoom", "Kuch Kuch Hota Hai",
-        "Kabhi Khushi Kabhie Gham", "Rang De Basanti", "Taare Zameen Par",
+        "Kabhi Khushi Kabhi Gham", "Rang De Basanti", "Taare Zameen Par",
         "Gully Boy", "Bajrangi Bhaijaan", "Sultan", "Padmaavat",
         "Bahubali", "KGF", "Jawan", "Pathaan", "Animal", "Stree",
         "Munna Bhai", "Chak De India", "Swades", "Drishyam",
