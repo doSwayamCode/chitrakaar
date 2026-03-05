@@ -1321,7 +1321,23 @@ function shareGameResultToWhatsApp() {
 const STUN_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.relay.metered.ca:80' },
+        {
+            urls: 'turn:global.relay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:global.relay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        {
+            urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
     ]
 };
 
@@ -1343,6 +1359,10 @@ function updateMicButtons() {
 }
 
 async function enableVoice() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('🎤 Voice chat requires a secure (HTTPS) connection.', 'error');
+        return;
+    }
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         voiceEnabled = true;
@@ -1355,6 +1375,17 @@ async function enableVoice() {
         }
         setupSpeakingDetection(localStream, myId);
     } catch (err) {
+        micMuted = true;
+        updateMicButtons();
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            showToast('🎤 Microphone permission denied. Please allow mic access and try again.', 'error');
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            showToast('🎤 No microphone found. Please connect a mic and try again.', 'error');
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+            showToast('🎤 Microphone is in use by another app. Please close it and try again.', 'error');
+        } else {
+            showToast('🎤 Could not start voice chat: ' + (err.message || err.name), 'error');
+        }
     }
 }
 
@@ -1409,21 +1440,45 @@ function createPeer(targetId) {
     pc.ontrack = ({ streams }) => {
         if (!remoteAudios[targetId]) {
             const audio = document.createElement('audio');
-            audio.autoplay = true;
             audio.setAttribute('playsinline', '');
             audio.volume = 1.0;
             document.body.appendChild(audio);
             remoteAudios[targetId] = audio;
-            setupSpeakingDetection(streams[0], targetId);
         }
         remoteAudios[targetId].srcObject = streams[0];
-        remoteAudios[targetId].play().catch(() => {});
+        const playPromise = remoteAudios[targetId].play();
+        if (playPromise !== undefined) {
+            playPromise.catch(() => {
+                // Autoplay blocked — resume on next user interaction
+                const resume = () => {
+                    remoteAudios[targetId] && remoteAudios[targetId].play().catch(() => {});
+                    document.removeEventListener('click', resume);
+                    document.removeEventListener('keydown', resume);
+                };
+                document.addEventListener('click', resume, { once: true });
+                document.addEventListener('keydown', resume, { once: true });
+            });
+        }
+        setupSpeakingDetection(streams[0], targetId);
     };
 
     pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-            pc.close();
-            delete peerConnections[targetId];
+        if (pc.connectionState === 'failed') {
+            // Attempt ICE restart before giving up
+            if (pc.restartIce) {
+                pc.restartIce();
+            } else {
+                pc.close();
+                delete peerConnections[targetId];
+            }
+        } else if (pc.connectionState === 'disconnected') {
+            // Give it 5s to recover before closing
+            setTimeout(() => {
+                if (peerConnections[targetId] && peerConnections[targetId].connectionState === 'disconnected') {
+                    peerConnections[targetId].close();
+                    delete peerConnections[targetId];
+                }
+            }, 5000);
         }
     };
 
@@ -1439,8 +1494,12 @@ function setupSpeakingDetection(stream, playerId) {
         source.connect(analyser);
         const data = new Uint8Array(analyser.frequencyBinCount);
         let speaking = false;
+        let animId = null;
 
         function checkVolume() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
             analyser.getByteFrequencyData(data);
             const vol = data.reduce((a, b) => a + b, 0) / data.length;
             const nowSpeaking = vol > 15;
@@ -1448,9 +1507,21 @@ function setupSpeakingDetection(stream, playerId) {
                 speaking = nowSpeaking;
                 markSpeaking(playerId, speaking);
             }
-            requestAnimationFrame(checkVolume);
+            animId = requestAnimationFrame(checkVolume);
         }
-        checkVolume();
+
+        // Resume suspended AudioContext on first user gesture (desktop requirement)
+        if (audioCtx.state === 'suspended') {
+            const resumeCtx = () => {
+                audioCtx.resume().then(() => { animId = requestAnimationFrame(checkVolume); });
+                document.removeEventListener('click', resumeCtx);
+                document.removeEventListener('keydown', resumeCtx);
+            };
+            document.addEventListener('click', resumeCtx, { once: true });
+            document.addEventListener('keydown', resumeCtx, { once: true });
+        } else {
+            animId = requestAnimationFrame(checkVolume);
+        }
     } catch (_) {}
 }
 
