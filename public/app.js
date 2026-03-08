@@ -259,7 +259,8 @@ const MODE_LABELS = {
     memes: 'Memes',
     hard: 'Hard Mode',
     speed: 'Speed',
-    holi: '🎨 Holi Special'
+    holi: '🎨 Holi Special',
+    t20worldcup: '🏏 India T20 Champions! 🏆'
 };
 
 function getRoomLink(code) {
@@ -1591,6 +1592,34 @@ if (micBtn) micBtn.addEventListener('click', toggleMic);
         holiPromo.addEventListener('click', () => {
             gameModeSelect.value = 'holi';
             updateHoliVibe();
+        });
+    }
+})();
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─── India T20 World Cup Mode Visual Enhancement ──────────────────────────────
+(function () {
+    const modeCard = document.querySelector('.mode-selector');
+    const t20Promo = document.getElementById('t20-promo');
+    if (!gameModeSelect || !modeCard) return;
+
+    function updateT20Vibe() {
+        if (gameModeSelect.value === 't20worldcup') {
+            modeCard.classList.add('t20-active');
+            modeCard.classList.remove('holi-active');
+        } else {
+            modeCard.classList.remove('t20-active');
+        }
+    }
+
+    gameModeSelect.addEventListener('change', updateT20Vibe);
+    updateT20Vibe(); // apply on page load
+
+    // Clicking the promo banner auto-selects T20 mode
+    if (t20Promo) {
+        t20Promo.addEventListener('click', () => {
+            gameModeSelect.value = 't20worldcup';
+            updateT20Vibe();
         });
     }
 })();

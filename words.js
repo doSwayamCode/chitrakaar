@@ -194,6 +194,23 @@ const words = {
         "Bollywood Dance", "Item Number", "Wedding DJ", "Sangeet"
     ],
 
+    t20worldcup: [
+        "Rohit Sharma", "Virat Kohli", "Jasprit Bumrah", "Hardik Pandya",
+        "Suryakumar Yadav", "KL Rahul", "Shubman Gill", "Ravindra Jadeja",
+        "Axar Patel", "Mohammed Siraj", "Arshdeep Singh", "Rishabh Pant",
+        "Yuzvendra Chahal", "Gautam Gambhir", "Trophy Lift", "Victory Lap",
+        "National Anthem", "Blue Jersey", "India Flag", "Tricolor",
+        "Stadium Roar", "Fireworks", "T20 Final", "New Zealand",
+        "Black Caps", "Run Chase", "Last Over", "Match Winner",
+        "Captain", "All-rounder", "Wicketkeeper", "Pacer",
+        "Spinner", "Powerplay", "Death Overs", "Super Over",
+        "Sixer", "Boundary", "Hat Trick", "Stumped",
+        "World Champions", "ICC Trophy", "Cricket Fever", "Blue Army",
+        "T20 World Cup", "Victory Celebration", "Champions", "Gold Trophy",
+        "Confetti", "Dressing Room", "Pitch", "Cricket Bat",
+        "Cricket Ball", "Wicket", "Stump", "Bail","Baapu"
+    ],
+
     holi: [
         "Gulal", "Pichkari", "Thandai", "Gujiya", "Laddoo",
         "Holika", "Prahlad", "Dahan", "Abir", "Dhol",
@@ -242,6 +259,7 @@ const modeCategories = {
     nature: ['animals', 'nature'],
     memes: ['memes', 'personalities', 'bollywood'],
     hard: ['monuments', 'personalities', 'places'],
+    t20worldcup: ['t20worldcup'],
     holi: ['holi']
 };
 
