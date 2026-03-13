@@ -1,6 +1,6 @@
 // ─── Chitrakaar Drawing Gallery ───────────────────────────────────────────────
 // Fetches recent drawings from /api/gallery and replays stroke data on canvas.
-// Drawings are auto-deleted from MongoDB after 30 days via TTL index.
+// Drawings remain until explicitly deleted.
 // ──────────────────────────────────────────────────────────────────────────────
 
 (function () {

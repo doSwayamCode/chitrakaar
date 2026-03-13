@@ -153,20 +153,17 @@ async function connect() {
         await players.createIndex({ 'stats.gamesPlayed': -1 });
         await players.createIndex({ 'streak.current': -1 });
 
-        // Drawings — TTL auto-deletes anything older than 30 days
-        // Use collMod to ensure the TTL is applied even if the index already existed
+        // Drawings — keep forever unless explicitly deleted.
+        // Remove any existing TTL index from older versions.
         const drawings = db.collection('drawings');
         try {
-            await drawings.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
-        } catch (_) {
-            // Index may already exist — try updating TTL via collMod
-            try {
-                await db.command({
-                    collMod: 'drawings',
-                    index: { keyPattern: { createdAt: 1 }, expireAfterSeconds: 30 * 24 * 60 * 60 }
-                });
-            } catch (_2) { /* ignore */ }
-        }
+            const indexes = await drawings.indexes();
+            for (const idx of indexes) {
+                if (typeof idx.expireAfterSeconds === 'number') {
+                    await drawings.dropIndex(idx.name);
+                }
+            }
+        } catch (_) { /* ignore */ }
         await drawings.createIndex({ createdAt: -1 }); // for fast gallery fetch
 
         // Guest scores — TTL auto-deletes after 30 days; no signup needed
@@ -207,15 +204,14 @@ async function saveDrawing({ word, drawerName, strokes }) {
 
 /**
  * Fetch the most recent drawings for the gallery.
- * Only returns drawings from the last 30 days, up to `limit` entries.
+ * Returns newest drawings first, up to `limit` entries.
  */
 async function getGallery(limit = 300) {
     const database = getDb();
     if (!database) return [];
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     return database.collection('drawings')
         .find(
-            { createdAt: { $gte: thirtyDaysAgo } },
+            {},
             { projection: { _id: 0, word: 1, drawerName: 1, strokes: 1, createdAt: 1 } }
         )
         .sort({ createdAt: -1 })
