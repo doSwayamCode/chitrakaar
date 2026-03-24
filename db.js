@@ -153,8 +153,8 @@ async function connect() {
         await players.createIndex({ 'stats.gamesPlayed': -1 });
         await players.createIndex({ 'streak.current': -1 });
 
-        // Drawings — keep forever unless explicitly deleted.
-        // Remove any existing TTL index from older versions.
+        // Drawings — auto-delete after 365 days.
+        // Normalize any prior TTL indexes, then enforce current policy.
         const drawings = db.collection('drawings');
         try {
             const indexes = await drawings.indexes();
@@ -164,6 +164,10 @@ async function connect() {
                 }
             }
         } catch (_) { /* ignore */ }
+        await drawings.createIndex(
+            { createdAt: 1 },
+            { name: 'drawings_ttl_365d', expireAfterSeconds: 365 * 24 * 60 * 60 }
+        );
         await drawings.createIndex({ createdAt: -1 }); // for fast gallery fetch
 
         // Guest scores — TTL auto-deletes after 30 days; no signup needed
