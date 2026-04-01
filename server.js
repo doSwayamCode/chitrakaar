@@ -842,7 +842,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        io.to(room.code).emit('chatMessage', {
         markActive(room);
         io.to(room.code).emit('chatMessage', {
             playerName: player.name,
