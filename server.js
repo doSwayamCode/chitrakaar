@@ -480,12 +480,28 @@ function findPublicRoom() {
 function cleanupOldRooms() {
     const now = Date.now();
     const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const STUCK_GAME_TIMEOUT = 20 * 60 * 1000; // 20 minutes
     for (const [code, room] of rooms) {
+        // Remove empty, old waiting rooms (original logic)
         if (now - room.createdAt > TWO_HOURS && room.state === 'waiting' && room.players.length === 0) {
             rooms.delete(code);
             publicRooms.delete(code);
+            continue;
+        }
+
+        // --- Stuck game detection ---
+        // If a game is in 'playing', 'choosingWord', or 'roundEnd' for too long, force end it
+        if ((room.state === 'playing' || room.state === 'choosingWord' || room.state === 'roundEnd') && room.players.length >= 2) {
+            if (!room._lastActive) room._lastActive = now;
+            // If no activity for STUCK_GAME_TIMEOUT, force end
+            if (now - room._lastActive > STUCK_GAME_TIMEOUT) {
+                console.warn(`[STUCK GAME] Room ${code} stuck in state '${room.state}' for >20min. Forcing endGame.`);
+                try { endGame(room); } catch (e) { console.error('Error auto-ending stuck game:', e); }
+                room._lastActive = now;
+            }
         }
     }
+}
 }
 
 setInterval(cleanupOldRooms, 10 * 60 * 1000);
@@ -536,6 +552,10 @@ function rateLimit(socketId, type, maxPerSecond) {
 }
 
 io.on('connection', (socket) => {
+    // Patch all room-changing events to update _lastActive for stuck-game detection
+    function markActive(room) {
+        if (room) room._lastActive = Date.now();
+    }
     let currentRoom = null;
 
     // Track connections
@@ -565,6 +585,7 @@ io.on('connection', (socket) => {
         const room = createRoom(socket.id, name, validAvatar, validMode, !!isPublic, validRounds);
         currentRoom = room.code;
         socket.join(room.code);
+        markActive(room);
 
         socket.emit('roomCreated', {
             code: room.code,
@@ -606,6 +627,7 @@ io.on('connection', (socket) => {
         room.players.push({ id: socket.id, name: name, score: 0, avatarId: validAvatar });
         currentRoom = code;
         socket.join(code);
+        markActive(room);
 
         socket.emit('roomJoined', {
             code: room.code,
@@ -625,6 +647,7 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 if (room.state === 'waiting' && room.players.length >= 2) {
                     startGame(room);
+                    markActive(room);
                 }
             }, 5000);
             io.to(room.code).emit('autoStarting', { countdown: 5 });
@@ -664,6 +687,7 @@ io.on('connection', (socket) => {
                 setTimeout(() => {
                     if (room.state === 'waiting' && room.players.length >= 2) {
                         startGame(room);
+                        markActive(room);
                     }
                 }, 5000);
                 io.to(room.code).emit('autoStarting', { countdown: 5 });
@@ -694,6 +718,7 @@ io.on('connection', (socket) => {
         }
 
         if (!startGame(room)) {
+            markActive(room);
             socket.emit('error', { message: 'Need at least 2 players to start!' });
         }
     });
@@ -712,8 +737,8 @@ io.on('connection', (socket) => {
         // Validate rounds (3-10)
         if (typeof rounds === 'number' && rounds >= 3 && rounds <= 10) {
             room.totalRounds = rounds;
-            // Broadcast updated rounds to all players in room
             io.to(room.code).emit('roundsUpdated', { totalRounds: rounds });
+            markActive(room);
         }
     });
 
@@ -726,6 +751,7 @@ io.on('connection', (socket) => {
         if (drawer.id !== socket.id) return;
 
         selectWord(room, word);
+        markActive(room);
     });
 
     socket.on('draw', (data) => {
@@ -741,6 +767,7 @@ io.on('connection', (socket) => {
 
         room.drawHistory.push(data);
         socket.to(currentRoom).emit('draw', data);
+        markActive(room);
     });
 
     socket.on('clearCanvas', () => {
@@ -753,6 +780,7 @@ io.on('connection', (socket) => {
 
         room.drawHistory = [];
         socket.to(currentRoom).emit('clearCanvas');
+        markActive(room);
     });
 
     socket.on('chatMessage', ({ message }) => {
@@ -816,6 +844,7 @@ io.on('connection', (socket) => {
         }
 
         io.to(room.code).emit('chatMessage', {
+        markActive(room);
             playerName: player.name,
             message: cleanMessage,
             type: 'normal'
@@ -891,6 +920,7 @@ io.on('connection', (socket) => {
         }
 
         socket.emit('rejoinSuccess', payload);
+        markActive(room);
     });
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -942,6 +972,7 @@ io.on('connection', (socket) => {
             rooms.delete(currentRoom);
             return;
         }
+        markActive(room);
 
         // Always notify remaining players
         io.to(room.code).emit('playerLeft', {
